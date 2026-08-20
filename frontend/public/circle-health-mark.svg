@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="circleHealthGradient" x1="10" x2="39" y1="7" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#b8dc00"/>
+      <stop offset=".48" stop-color="#70c94b"/>
+      <stop offset="1" stop-color="#00b7b2"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="#fff"/>
+  <g fill="none" stroke="url(#circleHealthGradient)" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.35">
+    <path d="M32.7 7.9A18.2 18.2 0 1 0 39 34.5"/>
+    <path d="M22.1 38.4V26.7"/>
+    <path d="M22.1 31.8c-5.7-.2-9.7-3.5-10.8-8.7 5.8-.1 9.8 3.1 10.8 8.7Z"/>
+    <path d="M22.1 26.7c.7-6.2 4.4-10.2 10.7-11.1-.2 6.1-4.2 10.1-10.7 11.1Z"/>
+  </g>
+  <circle cx="37.3" cy="10.4" r="1.9" fill="url(#circleHealthGradient)"/>
+</svg>

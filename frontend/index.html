@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f2ed" />
+    <meta name="description" content="Circle Health — your intelligent fitness and nutrition planner." />
+    <link rel="icon" type="image/svg+xml" href="/circle-health-mark.svg" />
+    <title>Circle Health · Fitness &amp; Nutrition</title>
+  </head>
+  <body>
+    <script>
+      (() => {
+        const saved = localStorage.getItem("pulse_theme") || "system";
+        const dark = saved === "dark" || (saved === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
