@@ -2,9 +2,9 @@ spring:
   application:
     name: pulse-api
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/pulse}
-    username: ${DATABASE_USERNAME:pulse}
-    password: ${DATABASE_PASSWORD:pulse}
+    url: ${DATABASE_URL:jdbc:postgresql://aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require}
+    username: ${DATABASE_USERNAME:postgres.jchfppwirlvkimjrtqmk}
+    password: ${DATABASE_PASSWORD:Circlehealth5619}
   jpa:
     hibernate:
       ddl-auto: update
