@@ -7,3 +7,15 @@ frontend/dist/
 backend/target/
 tmp/
 *.log
+
+# Local dev overrides
+docker-compose.override.yml
+
+# IntelliJ module files
+*.iml
+
+# Claude Code
+.claude/
+.mcp.json
+CLAUDE.local.md
+/docs-personal/
