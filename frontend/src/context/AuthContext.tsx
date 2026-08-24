@@ -1,50 +1,99 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { AuthContext, type AuthContextValue } from "./auth";
 import { api } from "../services/api";
+import { supabase } from "../lib/supabase";
 import type { User } from "../types";
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const value = localStorage.getItem("pulse_user");
-    return value ? JSON.parse(value) : null;
-  });
+const appUser = (user: SupabaseUser | null): User | null => {
+  if (!user?.email) return null;
+  const metadataName = user.user_metadata.name;
+  const name =
+    typeof metadataName === "string" && metadataName.trim()
+      ? metadataName.trim()
+      : user.email.split("@")[0];
+  return { name, email: user.email };
+};
 
-  const setSession = (data: { token: string; name: string; email: string }) => {
-    localStorage.setItem("pulse_token", data.token);
-    localStorage.setItem(
-      "pulse_user",
-      JSON.stringify({ name: data.name, email: data.email }),
-    );
-    setUser({ name: data.name, email: data.email });
-  };
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setUser(appUser(data.session?.user ?? null));
+      setLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      setUser(appUser(session?.user ?? null));
+      setLoading(false);
+    });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      loading,
       login: async (email, password) => {
-        try {
-          setSession(await api.login(email, password));
-        } catch (error) {
-          if (!(error instanceof TypeError)) throw error;
-          // Demo fallback keeps the frontend usable while the API is offline.
-          setSession({ token: "demo-token", name: "Adhiraj Dogra", email });
-        }
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        setUser(appUser(data.user));
       },
       register: async (name, email, password, dietaryPattern, customDietaryPattern) => {
-        try {
-          setSession(await api.register(name, email, password, dietaryPattern, customDietaryPattern));
-        } catch (error) {
-          if (!(error instanceof TypeError)) throw error;
-          setSession({ token: "demo-token", name, email });
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            data: { name, dietaryPattern, customDietaryPattern },
+          },
+        });
+        if (error) throw error;
+        setUser(appUser(data.session?.user ?? null));
+
+        if (data.session) {
+          await api.updateProfile({
+            dietaryProfile: {
+              dietaryPattern: dietaryPattern as "OMNIVORE" | "VEGETARIAN" | "VEGAN" | "PESCATARIAN" | "EGGETARIAN" | "FLEXITARIAN" | "CUSTOM",
+              customDietaryPattern: customDietaryPattern ?? "",
+              restrictions: [],
+              customExclusions: [],
+              culturalPreferences: [],
+              customCulturalPreferences: [],
+              allergies: [],
+              customAllergies: [],
+              intolerances: [],
+              customIntolerances: [],
+              favouriteFoods: [],
+              dislikedFoods: [],
+              preferredCuisines: [],
+              preferredProteinSources: [],
+              customProteinSources: [],
+              preferredMealsPerDay: 3,
+              mealPrepDifficulty: "EASY",
+              mealPrepTime: "MIN_15_30",
+              budgetPreference: "MODERATE",
+            },
+          });
         }
+        return Boolean(data.session);
       },
-      logout: () => {
-        localStorage.removeItem("pulse_token");
-        localStorage.removeItem("pulse_user");
+      logout: async () => {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
         setUser(null);
       },
     }),
-    [user],
+    [loading, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

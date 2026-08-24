@@ -19,3 +19,4 @@ docker-compose.override.yml
 .mcp.json
 CLAUDE.local.md
 /docs-personal/
+.gstack/

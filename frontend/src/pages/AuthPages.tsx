@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Activity,
   ArrowRight,
@@ -10,17 +10,19 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { FormField, inputClass, PillButton } from "../components/ui";
 import { useAuth } from "../context/auth";
 import { BrandLogo } from "../components/BrandLogo";
+import { supabase } from "../lib/supabase";
 
 export function AuthPage({ mode }: { mode: "login" | "register" }) {
-  const { user, login, register } = useAuth();
+  const { user, loading: authLoading, login, register } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [name, setName] = useState("Adhiraj Dogra");
-  const [email, setEmail] = useState("adhiraj@example.com");
-  const [password, setPassword] = useState("password123");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [dietaryPattern, setDietaryPattern] = useState("OMNIVORE");
   const [customDietaryPattern, setCustomDietaryPattern] = useState("");
+  if (authLoading) return <div className="min-h-screen animate-pulse bg-canvas" />;
   if (user) return <Navigate to="/dashboard" replace />;
 
   const submit = async (event: FormEvent) => {
@@ -29,10 +31,38 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
     setError("");
     try {
       if (mode === "login") await login(email, password);
-      else await register(name, email, password, dietaryPattern, customDietaryPattern);
+      else {
+        const signedIn = await register(name, email, password, dietaryPattern, customDietaryPattern);
+        if (!signedIn) {
+          setError("Check your email to confirm your account, then sign in.");
+          return;
+        }
+      }
       navigate("/dashboard");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to continue");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const requestPasswordReset = async () => {
+    setError("");
+    if (!email.trim()) {
+      setError("Enter your email address first.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        { redirectTo: `${window.location.origin}/reset-password` },
+      );
+      if (resetError) throw resetError;
+      setError("Password reset instructions have been sent to your email.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to send password reset email");
     } finally {
       setLoading(false);
     }
@@ -130,11 +160,8 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
                 </label>
                 <button
                   type="button"
-                  onClick={() =>
-                    setError(
-                      "Password reset instructions have been sent to your email.",
-                    )
-                  }
+                  disabled={loading}
+                  onClick={() => void requestPasswordReset()}
                   className="font-semibold text-ink hover:underline"
                 >
                   Forgot password?
@@ -143,7 +170,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
             )}
             {error && (
               <p
-                className={`${error.includes("sent") ? "bg-[#ebfaef] text-[#218c49]" : "bg-red-50 text-red-600"} rounded-xl p-3 text-sm`}
+                className={`${error.includes("sent") || error.includes("Check your email") ? "bg-[#ebfaef] text-[#218c49]" : "bg-red-50 text-red-600"} rounded-xl p-3 text-sm`}
               >
                 {error}
               </p>
@@ -185,6 +212,153 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+export function ResetPasswordPage() {
+  const navigate = useNavigate();
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [hasRecoverySession, setHasRecoverySession] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+      if (event === "PASSWORD_RECOVERY" || session) setHasRecoverySession(true);
+      setCheckingSession(false);
+    });
+
+    void supabase.auth.getSession().then(({ data, error: sessionError }) => {
+      if (!active) return;
+      if (sessionError) setError(sessionError.message);
+      setHasRecoverySession(Boolean(data.session));
+      setCheckingSession(false);
+    });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
+      navigate("/dashboard", { replace: true });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to update password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (checkingSession) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-canvas">
+        <p className="animate-pulse text-sm font-semibold text-muted">Checking reset link…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid min-h-screen place-items-center bg-canvas px-5">
+      <div className="w-full max-w-md rounded-3xl bg-surface p-8 shadow-xl">
+        <BrandLogo className="text-xl" markClassName="size-10" />
+        <h1 className="mt-8 text-3xl font-bold tracking-[-0.04em] text-ink">Set a new password</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">
+          {hasRecoverySession
+            ? "Choose a new password for your Circle Health account."
+            : "This reset link is invalid or has expired. Request a new one from the sign-in page."}
+        </p>
+
+        {hasRecoverySession ? (
+          <form onSubmit={submit} className="mt-7 space-y-5">
+            <FormField label="New password">
+              <input required minLength={8} type="password" className={inputClass} value={password} onChange={(event) => setPassword(event.target.value)} />
+            </FormField>
+            <FormField label="Confirm new password">
+              <input required minLength={8} type="password" className={inputClass} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+            </FormField>
+            {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-600">{error}</p>}
+            <PillButton disabled={loading} className="w-full bg-ink text-white">
+              {loading ? "Updating…" : "Update password"}
+              <ArrowRight size={16} />
+            </PillButton>
+          </form>
+        ) : (
+          <Link className="mt-6 inline-flex font-bold text-violet hover:underline" to="/login">
+            Return to sign in
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function AuthCallbackPage() {
+  const navigate = useNavigate();
+  const started = useRef(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+
+    const completeAuthentication = async () => {
+      const current = await supabase.auth.getSession();
+      if (current.error) throw current.error;
+      if (current.data.session) {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      const code = new URLSearchParams(window.location.search).get("code");
+      if (code) {
+        const exchanged = await supabase.auth.exchangeCodeForSession(code);
+        if (exchanged.error) throw exchanged.error;
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      throw new Error("The confirmation link is invalid or has expired. Please sign in again.");
+    };
+
+    void completeAuthentication().catch((reason: unknown) => {
+      setError(reason instanceof Error ? reason.message : "Unable to confirm your account");
+    });
+  }, [navigate]);
+
+  if (error) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-canvas px-5">
+        <div className="max-w-md rounded-3xl bg-surface p-8 text-center shadow-xl">
+          <h1 className="text-2xl font-bold text-ink">Unable to finish signing in</h1>
+          <p className="mt-3 text-sm leading-6 text-muted">{error}</p>
+          <Link className="mt-6 inline-flex font-bold text-violet hover:underline" to="/login">
+            Return to sign in
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid min-h-screen place-items-center bg-canvas">
+      <p className="animate-pulse text-sm font-semibold text-muted">Confirming your account…</p>
     </div>
   );
 }
