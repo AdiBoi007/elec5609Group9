@@ -1,5 +1,19 @@
 # React + TypeScript + Vite
 
+## Local environment
+
+Copy `.env.example` to `.env`, then configure:
+
+```dotenv
+VITE_API_URL=http://localhost:8080/api
+VITE_SUPABASE_URL=https://jchfppwirlvkimjrtqmk.supabase.co
+VITE_SUPABASE_ANON_KEY=your_publishable_or_anon_key_here
+```
+
+Get the frontend API key from Supabase Dashboard under **Project Settings -> API Keys**. Prefer the `sb_publishable_...` key; the legacy `anon` key also works. Never put a `sb_secret_...`, `service_role`, or JWT signing secret in the frontend environment.
+
+The real `.env` file is ignored by Git. Restart the Vite development server after changing it.
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:

@@ -32,6 +32,7 @@ import type {
   FinishDayResponse,
   TodaySummary,
 } from "../types";
+import { supabase } from "../lib/supabase";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
@@ -39,7 +40,9 @@ const request = async <T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> => {
-  const token = localStorage.getItem("pulse_token");
+  const { data, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  const token = data.session?.access_token;
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
@@ -50,9 +53,8 @@ const request = async <T>(
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    if ((response.status === 401 || response.status === 403) && token) {
-      localStorage.removeItem("pulse_token");
-      localStorage.removeItem("pulse_user");
+    if (response.status === 401 && token) {
+      await supabase.auth.signOut();
       if (!window.location.pathname.startsWith("/login")) window.location.assign("/login");
     }
     throw new Error(body.message || "Something went wrong");
@@ -62,16 +64,6 @@ const request = async <T>(
 };
 
 export const api = {
-  login: (email: string, password: string) =>
-    request<{ token: string; name: string; email: string }>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
-  register: (name: string, email: string, password: string, dietaryPattern: string, customDietaryPattern?: string) =>
-    request<{ token: string; name: string; email: string }>("/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ name, email, password, dietaryPattern, customDietaryPattern }),
-    }),
   getDashboard: () => request<DashboardSummary>("/dashboard"),
   getToday: () => request<TodaySummary>("/today"),
   addWater: (amountMl: number) =>
@@ -91,7 +83,9 @@ export const api = {
       body: JSON.stringify(profile),
     }),
   exportProfile: async () => {
-    const token = localStorage.getItem("pulse_token");
+    const { data, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    const token = data.session?.access_token;
     const response = await fetch(`${API_URL}/profile/export`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });

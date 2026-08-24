@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { useAuth } from "./context/auth";
-import { AuthPage } from "./pages/AuthPages";
+import { AuthCallbackPage, AuthPage, ResetPasswordPage } from "./pages/AuthPages";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const WorkoutsPage = lazy(() => import("./pages/Workouts"));
@@ -28,7 +28,8 @@ const InsightsPage = lazy(() => import("./pages/InsightsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 
 function ProtectedShell() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen animate-pulse bg-canvas" />;
   return user ? <AppShell /> : <Navigate to="/login" replace />;
 }
 
@@ -38,6 +39,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route element={<ProtectedShell />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/log" element={<LogPage />} />

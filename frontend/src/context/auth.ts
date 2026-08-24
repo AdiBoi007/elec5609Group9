@@ -3,9 +3,10 @@ import type { User } from "../types";
 
 export type AuthContextValue = {
   user: User | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, dietaryPattern: string, customDietaryPattern?: string) => Promise<void>;
-  logout: () => void;
+  register: (name: string, email: string, password: string, dietaryPattern: string, customDietaryPattern?: string) => Promise<boolean>;
+  logout: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
