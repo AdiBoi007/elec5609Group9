@@ -26,7 +26,7 @@ import {
 import { DietaryPreferencesEditor } from "../components/DietaryPreferencesEditor";
 import { api } from "../services/api";
 import type { UserProfile } from "../types";
-import { FITNESS_GOALS, fitnessGoalLabel } from "../types";
+import { FITNESS_GOALS, fitnessGoalLabel, isProfileComplete } from "../types";
 import { useTheme, type ThemeMode } from "../context/theme";
 
 const sections = [
@@ -356,6 +356,13 @@ export default function SettingsPage() {
                   title="Calculated targets"
                   description="One source of truth used by Dashboard, Nutrition and Progress"
                 />
+                {!isProfileComplete(profile) && (
+                  <p className="mt-4 rounded-xl bg-amber/10 p-3 text-sm font-semibold text-ink">
+                    These are default values. Complete your age, gender, height,
+                    weight, activity level and goal in the Profile tab to
+                    personalise them.
+                  </p>
+                )}
                 <MetricStrip className="mt-5 grid-cols-2 xl:grid-cols-3">
                   <MetricItem
                     label="BMI"

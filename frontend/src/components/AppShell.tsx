@@ -4,10 +4,13 @@ import { BarChart3, Bell, Brain, CirclePlus, Dumbbell, LayoutDashboard, LogOut, 
 import { useAuth } from "../context/auth";
 import { useTheme } from "../context/theme";
 import { api } from "../services/api";
-import type { AppNotification } from "../types";
+import { isProfileComplete, type AppNotification, type UserProfile } from "../types";
 import { CommandPalette } from "./CommandPalette";
 import { QuickLogDrawer } from "./QuickLogDrawer";
+import { OnboardingModal } from "./OnboardingModal";
 import { BrandLogo } from "./BrandLogo";
+
+const ONBOARDING_DISMISSED_KEY = "pulse_onboarding_dismissed";
 
 const navGroups = [
   { label: "Today", items: [{ label: "Dashboard", to: "/dashboard", icon: LayoutDashboard }] },
@@ -54,8 +57,11 @@ export function AppShell() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unread, setUnread] = useState(0);
   const [notificationError, setNotificationError] = useState("");
+  const [onboardingProfile, setOnboardingProfile] = useState<UserProfile | null>(null);
   const loadNotifications = () => api.getNotifications().then(result => { setNotifications(result.notifications); setUnread(result.unreadCount); setNotificationError(""); }).catch(reason => setNotificationError(reason instanceof Error ? reason.message : "Unable to load notifications"));
   useEffect(() => { void loadNotifications(); }, []);
+  useEffect(() => { if (sessionStorage.getItem(ONBOARDING_DISMISSED_KEY) === "true") return; void api.getProfile().then(profile => { if (!isProfileComplete(profile)) setOnboardingProfile(profile); }).catch(() => undefined); }, []);
+  const dismissOnboarding = () => { sessionStorage.setItem(ONBOARDING_DISMISSED_KEY, "true"); setOnboardingProfile(null); };
   useEffect(() => { const shortcut = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); } }; window.addEventListener("keydown", shortcut); return () => window.removeEventListener("keydown", shortcut); }, []);
   const toggleCollapsed = () => setCollapsed(current => { localStorage.setItem("pulse_sidebar_collapsed", String(!current)); return !current; });
   return <div className="min-h-screen bg-canvas text-ink">
@@ -71,5 +77,6 @@ export function AppShell() {
     </div>
     <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)}/>
     <QuickLogDrawer open={quickLogOpen} onClose={() => setQuickLogOpen(false)}/>
+    {onboardingProfile && <OnboardingModal profile={onboardingProfile} onComplete={dismissOnboarding} onSkip={dismissOnboarding}/>}
   </div>;
 }
