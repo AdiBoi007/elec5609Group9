@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.time.*;
 import java.nio.charset.StandardCharsets;
 import com.pulse.service.NutritionCalculatorService;
+import com.pulse.service.NutritionTotalsCalculator;
 import com.pulse.service.DietaryProfileService;
 import com.pulse.dto.DietaryProfileDtos.DietaryProfileUpdate;
 import jakarta.validation.Valid;
@@ -30,6 +31,7 @@ public class ProfileController {
     private final BodyMeasurementRepository measurements;
     private final GoalRepository goals;
     private final DietaryProfileService dietaryProfiles;
+    private final NutritionTotalsCalculator nutritionTotals;
 
     @GetMapping Map<String, Object> get(Authentication auth) {
         User user = users.findByEmailIgnoreCase(auth.getName()).orElseThrow(); UserProfile p = user.getProfile();
@@ -73,11 +75,12 @@ public class ProfileController {
         writer.println("DIETARY_PROFILE"); writer.println("pattern,restrictions,cultural_preferences,allergies,intolerances,favourite_foods,disliked_foods,preferred_cuisines,preferred_proteins,meals_per_day,prep_difficulty,prep_time,budget");
         var dietary = dietaryProfiles.response(p); writer.printf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n%n", csv(dietary.dietaryPattern()), csv(String.join("; ", dietary.restrictions())), csv(String.join("; ", dietary.culturalPreferences())), csv(String.join("; ", dietary.allergies())), csv(String.join("; ", dietary.intolerances())), csv(String.join("; ", dietary.favouriteFoods())), csv(String.join("; ", dietary.dislikedFoods())), csv(String.join("; ", dietary.preferredCuisines())), csv(String.join("; ", dietary.preferredProteinSources())), dietary.preferredMealsPerDay(), csv(dietary.mealPrepDifficulty()), csv(dietary.mealPrepTime()), csv(dietary.budgetPreference()));
         writer.println("WORKOUTS"); writer.println("date,name,duration_minutes,exercise_count,notes"); workouts.findByUserIdAndStartedAtBetweenOrderByStartedAtDesc(user.getId(), LocalDateTime.now().minusYears(10), LocalDateTime.now().plusDays(1)).forEach(w -> writer.printf("%s,%s,%s,%s,%s%n", w.getStartedAt(), csv(w.getName()), w.getDurationMinutes(), w.getExercises().size(), csv(w.getNotes())));
-        writer.println("\nNUTRITION"); writer.println("date,meal,type,quality_score"); meals.findByUserIdOrderByEatenAtDesc(user.getId()).forEach(m -> writer.printf("%s,%s,%s,%s%n", m.getEatenAt(), csv(m.getName()), csv(m.getMealType()), m.getQualityScore()));
+        writer.println("\nNUTRITION"); writer.println("date,meal,type,calories,protein_g,carbohydrates_g,fat_g,quality_score"); meals.findByUserIdOrderByEatenAtDesc(user.getId()).forEach(m -> { var t = nutritionTotals.calculate(m); writer.printf("%s,%s,%s,%s,%s,%s,%s,%s%n", m.getEatenAt(), csv(m.getName()), csv(m.getMealType()), Math.round(t.calories()), round1(t.protein()), round1(t.carbohydrates()), round1(t.fat()), m.getQualityScore()); });
         writer.println("\nWATER"); writer.println("date,amount_ml"); waterLogs.findByUserIdAndLoggedAtBetween(user.getId(), LocalDateTime.now().minusYears(10), LocalDateTime.now().plusDays(1)).forEach(w -> writer.printf("%s,%s%n", w.getLoggedAt(), w.getAmountMl()));
         writer.println("\nSLEEP"); writer.println("bedtime,wake_time,duration_minutes,quality,notes"); sleepLogs.findByUserIdOrderByStartedAtDesc(user.getId()).forEach(s -> writer.printf("%s,%s,%s,%s,%s%n", s.getStartedAt(), s.getEndedAt(), Duration.between(s.getStartedAt(), s.getEndedAt()).toMinutes(), s.getQuality(), csv(s.getNotes())));
         writer.println("\nBODY_MEASUREMENTS"); writer.println("date,weight_kg,body_fat,chest_cm,waist_cm,hips_cm,arms_cm,thighs_cm,notes"); measurements.findByUserIdOrderByMeasuredOnDesc(user.getId()).forEach(m -> writer.printf("%s,%s,%s,%s,%s,%s,%s,%s,%s%n", m.getMeasuredOn(), m.getWeightKg(), m.getBodyFatPercentage(), m.getChestCm(), m.getWaistCm(), m.getHipsCm(), m.getArmsCm(), m.getThighsCm(), csv(m.getNotes())));
         writer.println("\nGOALS"); writer.println("type,title,start_value,target_value,unit,start_date,target_date,status,direction,completed_date,created_at"); goals.findByUserIdOrderByCreatedAtDesc(user.getId()).forEach(g -> writer.printf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n", g.getType(), csv(g.getTitle()), g.getStartValue(), g.getTargetValue(), csv(g.getUnit()), g.getStartDate(), g.getTargetDate(), g.getStatus(), g.getDirection(), g.getCompletedDate(), g.getCreatedAt()));
     }
     private String csv(String value) { return value == null ? "" : "\"" + value.replace("\"", "\"\"") + "\""; }
+    private double round1(double value) { return Math.round(value * 10d) / 10d; }
 }
