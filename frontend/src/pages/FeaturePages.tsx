@@ -51,6 +51,7 @@ import type {
   FoodEntry,
   UserProfile,
 } from "../types";
+import { FITNESS_GOALS } from "../types";
 
 const tooltipStyle = {
   border: "0",
@@ -1312,7 +1313,7 @@ export function SettingsPage() {
     height: 0,
     weight: 0,
     activityLevel: "Moderately active",
-    fitnessGoal: "Maintain",
+    fitnessGoal: "MAINTAIN",
   });
   const [notifications, setNotifications] = useState({
     workouts: true,
@@ -1530,9 +1531,11 @@ export function SettingsPage() {
                       })
                     }
                   >
-                    <option>Lose weight</option>
-                    <option>Maintain</option>
-                    <option>Build muscle</option>
+                    {FITNESS_GOALS.map((goal) => (
+                      <option key={goal.value} value={goal.value}>
+                        {goal.label}
+                      </option>
+                    ))}
                   </select>
                 </FormField>
               </div>
