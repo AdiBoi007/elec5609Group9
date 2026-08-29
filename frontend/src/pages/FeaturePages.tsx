@@ -51,7 +51,8 @@ import type {
   FoodEntry,
   UserProfile,
 } from "../types";
-import { FITNESS_GOALS } from "../types";
+import { FITNESS_GOALS, isProfileComplete } from "../types";
+import { Link } from "react-router-dom";
 
 const tooltipStyle = {
   border: "0",
@@ -69,6 +70,7 @@ export function NutritionPage() {
     carbs: number;
     fat: number;
   } | null>(null);
+  const [targetsPersonalized, setTargetsPersonalized] = useState(true);
   const [quality, setQuality] = useState({
     score: 0,
     rating: "No score yet",
@@ -180,14 +182,15 @@ export function NutritionPage() {
   useEffect(() => {
     api
       .getProfile()
-      .then((profile) =>
+      .then((profile) => {
         setTargets({
           calories: profile.calorieTarget ?? 2200,
           protein: profile.proteinTarget ?? 150,
           carbs: profile.carbTarget ?? 250,
           fat: profile.fatTarget ?? 70,
-        }),
-      )
+        });
+        setTargetsPersonalized(isProfileComplete(profile));
+      })
       .catch((reason) =>
         setPageError(
           reason instanceof Error
@@ -280,6 +283,15 @@ export function NutritionPage() {
       {pageError && (
         <p className="mb-4 rounded-2xl bg-[#fff1ef] p-4 text-sm font-semibold text-coral">
           {pageError}
+        </p>
+      )}
+      {!targetsPersonalized && (
+        <p className="mb-4 rounded-2xl bg-amber/10 p-4 text-sm font-semibold text-ink">
+          These are default targets, not personalised for you yet.{" "}
+          <Link to="/settings" className="text-coral underline">
+            Complete your profile
+          </Link>{" "}
+          to personalise them.
         </p>
       )}
       <div className="grid gap-4 lg:grid-cols-[1.45fr_.55fr]">

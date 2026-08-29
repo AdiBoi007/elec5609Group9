@@ -353,172 +353,172 @@
     alter table if exists body_measurement 
        add constraint FK8ceiblxxlvaxoyiq8vm14o9c0 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists favourite_exercise 
        add constraint FK1lstsmrxm2395xhf24wj5nvhe 
        foreign key (exercise_id) 
-       references exercise;
+       references exercise on delete cascade;
 
     alter table if exists favourite_exercise 
        add constraint FKd2spc6887mirwraymj6kcgxys 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists food 
        add constraint FK53o0bv2ep31n35u4gajjbm9l9 
        foreign key (owner_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists generated_meal_plan 
        add constraint FK498sn520aayjt54rrqgsjya44 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists generated_workout_plan 
        add constraint FKayjihprmlsg0tigrb839rbr2u 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists goals 
        add constraint FKksl5wjm9u3nmvv9cy7e3bu1nw 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists grocery_lists 
        add constraint FKf497l2am6dany1pjcigxp6m1p 
        foreign key (meal_plan_id) 
-       references generated_meal_plan;
+       references generated_meal_plan on delete cascade;
 
     alter table if exists grocery_lists 
        add constraint FKgtkfwimv7qdt0sv73asm67wmp 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists grocery_item 
        add constraint FKlj59kixv1dpsccv0u9fv26w3m 
        foreign key (grocery_list_id) 
-       references grocery_lists;
+       references grocery_lists on delete cascade;
 
     alter table if exists meal 
        add constraint FK8ll3fjh9lhxngjr0ft0ivqj6f 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists meal_food 
        add constraint FKgra778wnc9jcsrtyu2ywbny38 
        foreign key (food_id) 
-       references food;
+       references food on delete cascade;
 
     alter table if exists meal_food 
        add constraint FK9eo5x0xh1wkof5eybyeo8h16i 
        foreign key (meal_id) 
-       references meal;
+       references meal on delete cascade;
 
     alter table if exists notification 
        add constraint FKqbdwvce7wteewtihpp7ear8w9 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists profile_cultural_preferences 
        add constraint FKfcyoqr10ye76ge83bn9cc7a9 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists profile_custom_allergies 
        add constraint FKktm0g9gnhenbbqdx8vgu6rytn 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists profile_custom_cultural_preferences 
        add constraint FKosaqte3ovvctrfma6t23x543x 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists profile_custom_exclusions 
        add constraint FK65n100we2jj2whb51iq4mh5is 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists profile_custom_intolerances 
        add constraint FKbextg3bhc5y82mxsy6epx321d 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists profile_custom_proteins 
        add constraint FK97o8gugv7sxvh282u6k5d32dw 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists profile_dietary_restrictions 
        add constraint FKjjxute3hf62cmdo3u9bs7evua 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists profile_disliked_foods 
        add constraint FKbp7dp7ehsdnngpdklor7kdo3s 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists profile_favourite_foods 
        add constraint FK35ohi92mop0ufvnp8jlaghy3b 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists profile_food_allergies 
        add constraint FKoli9hgxji79ct5wns5yllb1s8 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists profile_food_intolerances 
        add constraint FKd6iqgobxe7mu33kb9d67uh8j0 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists profile_preferred_cuisines 
        add constraint FKqxe2l1w1f39ues11wdmay9kgo 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists profile_preferred_proteins 
        add constraint FK7ufeq29xtvs0vgamnrr38493j 
        foreign key (profile_id) 
-       references user_profile;
+       references user_profile on delete cascade;
 
     alter table if exists reminder 
        add constraint FKqsdemjg334x7x6hsovf3cacy7 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists sleep_log 
        add constraint FKioe5gtawmxbrt6ixjqmx5xjqq 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists user_profile 
        add constraint FKo147a12pvkvo2092u5yp6ufv 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists water_log 
        add constraint FK4ejq0p0iynojchgcwkyjk3sre 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists workout 
        add constraint FK9dfm98unw7r4v9lo0a9m86l22 
        foreign key (user_id) 
-       references app_users;
+       references app_users on delete cascade;
 
     alter table if exists workout_exercise 
        add constraint FKalytxvdcpsg2e2oo8ihk55dm2 
        foreign key (exercise_id) 
-       references exercise;
+       references exercise on delete cascade;
 
     alter table if exists workout_exercise
        add constraint FKqultuq4g6w47iqdaf0vb8ff3j
        foreign key (workout_id)
-       references workout;
+       references workout on delete cascade;
 
 -- ============================================================
 -- Supabase security lockdown (IMPORTANT)

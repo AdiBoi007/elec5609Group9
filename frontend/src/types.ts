@@ -50,6 +50,24 @@ export const FITNESS_GOALS = [
 export const fitnessGoalLabel = (value: string): string =>
   FITNESS_GOALS.find((goal) => goal.value === value)?.label ?? value;
 
+/**
+ * True once the user has supplied every measurement the nutrition targets are
+ * personalised from. Until then the API returns seeded default targets, so the
+ * UI must label them as defaults rather than personalised results.
+ */
+export const isProfileComplete = (
+  profile: Pick<
+    UserProfile,
+    "age" | "gender" | "height" | "weight" | "activityLevel" | "fitnessGoal"
+  >,
+): boolean =>
+  profile.age > 0 &&
+  !!profile.gender &&
+  profile.height > 0 &&
+  profile.weight > 0 &&
+  !!profile.activityLevel &&
+  !!profile.fitnessGoal;
+
 export type UserProfile = {
   name: string;
   email: string;
