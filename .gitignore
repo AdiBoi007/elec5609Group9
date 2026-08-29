@@ -17,6 +17,7 @@ docker-compose.override.yml
 # Claude Code
 .claude/
 .mcp.json
+CLAUDE.md
 CLAUDE.local.md
 /docs-personal/
 .gstack/
