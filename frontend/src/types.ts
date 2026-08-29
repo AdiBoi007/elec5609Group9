@@ -40,6 +40,16 @@ export type FoodEntry = {
   fat: number;
 };
 
+export const FITNESS_GOALS = [
+  { value: "CUT", label: "Lose weight" },
+  { value: "MAINTAIN", label: "Maintain" },
+  { value: "BULK", label: "Build muscle" },
+] as const;
+
+/** Display label for a fitness goal enum value; falls back to the raw value for unknown/legacy strings. */
+export const fitnessGoalLabel = (value: string): string =>
+  FITNESS_GOALS.find((goal) => goal.value === value)?.label ?? value;
+
 export type UserProfile = {
   name: string;
   email: string;

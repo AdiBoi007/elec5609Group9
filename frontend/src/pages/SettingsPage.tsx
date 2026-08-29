@@ -26,6 +26,7 @@ import {
 import { DietaryPreferencesEditor } from "../components/DietaryPreferencesEditor";
 import { api } from "../services/api";
 import type { UserProfile } from "../types";
+import { FITNESS_GOALS, fitnessGoalLabel } from "../types";
 import { useTheme, type ThemeMode } from "../context/theme";
 
 const sections = [
@@ -55,7 +56,7 @@ export default function SettingsPage() {
     height: 0,
     weight: 0,
     activityLevel: "Moderately active",
-    fitnessGoal: "Maintain",
+    fitnessGoal: "MAINTAIN",
   });
   const [notifications, setNotifications] = useState<
     Record<ReminderKey, boolean>
@@ -233,7 +234,7 @@ export default function SettingsPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-lg font-bold">{profile.name}</p>
                     <p className="mt-0.5 text-xs text-white/50">
-                      {profile.fitnessGoal} · {profile.activityLevel}
+                      {fitnessGoalLabel(profile.fitnessGoal)} · {profile.activityLevel}
                     </p>
                   </div>
                   <p className="text-lg font-bold">
@@ -314,9 +315,11 @@ export default function SettingsPage() {
                         })
                       }
                     >
-                      <option>Lose weight</option>
-                      <option>Maintain</option>
-                      <option>Build muscle</option>
+                      {FITNESS_GOALS.map((goal) => (
+                        <option key={goal.value} value={goal.value}>
+                          {goal.label}
+                        </option>
+                      ))}
                     </select>
                   </FormField>
                 </div>

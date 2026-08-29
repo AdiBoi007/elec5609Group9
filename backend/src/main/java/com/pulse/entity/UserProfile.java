@@ -14,7 +14,7 @@ public class UserProfile extends BaseEntity {
     private Double heightCm;
     private Double weightKg;
     private String activityLevel;
-    private String fitnessGoal;
+    @Convert(converter = FitnessGoalConverter.class) private FitnessGoal fitnessGoal;
     private Integer calorieTarget;
     private Integer proteinTarget;
     private Integer carbTarget;
