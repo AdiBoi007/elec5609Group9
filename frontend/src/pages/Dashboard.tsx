@@ -562,6 +562,22 @@ export default function Dashboard() {
               {streak?.current ?? 0} days
             </span>
           </div>
+          <div className="mt-3 grid grid-cols-7 gap-1.5">
+            {(streak?.lastSevenDays ?? []).map((day) => {
+              const weekday = new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { weekday: "narrow" });
+              return (
+                <div key={day.date} className="flex flex-col items-center gap-1">
+                  <span className="text-[9px] font-bold uppercase text-muted">{weekday}</span>
+                  <span
+                    title={`${day.date}: ${day.active ? "logged" : "no activity"}`}
+                    className={`grid aspect-square w-full place-items-center rounded-lg ${day.active ? "bg-coral/15 text-coral" : "bg-surface-muted text-muted/35"}`}
+                  >
+                    <Flame size={12} />
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </Card>
         <Card className="p-5">
           <SectionHeader
