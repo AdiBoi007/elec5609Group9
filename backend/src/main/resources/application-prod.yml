@@ -1,6 +1,15 @@
 spring:
   main:
     lazy-initialization: true
+  datasource:
+    hikari:
+      # Serverless instances scale horizontally; each should hold very few
+      # connections against the Supabase transaction pooler (port 6543).
+      maximum-pool-size: 2
+      minimum-idle: 0
+      connection-timeout: 10000
+      idle-timeout: 30000
+      max-lifetime: 280000
   jpa:
     open-in-view: false
     database-platform: org.hibernate.dialect.PostgreSQLDialect
