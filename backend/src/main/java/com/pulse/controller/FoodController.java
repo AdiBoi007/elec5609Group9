@@ -12,6 +12,7 @@ import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -21,17 +22,17 @@ public class FoodController {
     private final FoodRepository foods;
     private final UserRepository users;
     private final DietCompatibilityService compatibility;
-    @GetMapping List<FoodResponse> search(Authentication auth, @RequestParam(defaultValue = "") @Size(max = 100) String query) {
+    @GetMapping @Transactional(readOnly = true) List<FoodResponse> search(Authentication auth, @RequestParam(defaultValue = "") @Size(max = 100) String query) {
         User owner = users.findByEmailIgnoreCase(auth.getName()).orElseThrow();
         return foods.searchAvailable(owner.getId(), query.trim()).stream().limit(50).map(food -> FoodResponse.from(food, compatibility.evaluate(owner.getProfile(), food))).toList();
     }
-    @GetMapping("/barcode/{barcode}") FoodResponse barcode(Authentication auth, @PathVariable String barcode) {
+    @GetMapping("/barcode/{barcode}") @Transactional(readOnly = true) FoodResponse barcode(Authentication auth, @PathVariable String barcode) {
         if (!barcode.matches("\\d{6,14}")) throw new IllegalArgumentException("Enter a valid 6 to 14 digit barcode");
         Food food = lookup.findByBarcode(barcode);
         User user = auth == null ? null : users.findByEmailIgnoreCase(auth.getName()).orElse(null);
         return FoodResponse.from(food, user == null ? new DietCompatibility("UNKNOWN", false, java.util.List.of("Dietary compatibility could not be fully verified.")) : compatibility.evaluate(user.getProfile(), food));
     }
-    @PostMapping @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping @ResponseStatus(HttpStatus.CREATED) @Transactional
     FoodResponse create(Authentication auth, @Valid @RequestBody FoodRequest request) {
         User owner = users.findByEmailIgnoreCase(auth.getName()).orElseThrow();
         Food food = new Food(); food.setOwner(owner); food.setCustomFood(true); food.setName(request.name()); food.setServingSize(request.servingSize()); food.setServingUnit(request.servingUnit()); food.setMeasurementType(measurementType(request.servingUnit())); food.setNutritionBasisQuantity(request.servingSize()); food.setNutritionBasisUnit(request.servingUnit()); food.setCalories(request.calories()); food.setProtein(request.protein()); food.setCarbohydrates(request.carbohydrates()); food.setFat(request.fat()); food.setFibre(request.fibre()); food.setSugar(request.sugar()); food.setSaturatedFat(request.saturatedFat());
