@@ -23,6 +23,10 @@ const tone = (status: string) => status === "COMPLETED" || status === "AHEAD" ||
 const formatValue = (value: number | undefined, unit: string) => value == null ? "—" : `${Number.isInteger(value) ? value : value.toFixed(1)} ${unit}`;
 
 export default function GoalsPage() {
+  return <GoalsWorkspace />;
+}
+
+export function GoalsWorkspace({ embedded = false }: { embedded?: boolean }) {
   const [searchParams] = useSearchParams();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -54,7 +58,11 @@ export default function GoalsPage() {
   };
 
   return <div>
-    <PageHeader eyebrow="Progress" title="Goals" description="Turn your health data into measurable outcomes." action={<PillButton onClick={() => setEditing("new")} className="bg-ink text-white"><Plus size={16}/>New goal</PillButton>}/>
+    {embedded ? (
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.12em] text-muted">Trackable outcomes</p><h2 className="mt-1 text-xl font-bold">Goals & timelines</h2><p className="mt-1 text-sm text-muted">Create, edit, pause and review goals without leaving Progress.</p></div><PillButton onClick={() => setEditing("new")} className="bg-ink text-white"><Plus size={16}/>New goal</PillButton></div>
+    ) : (
+      <PageHeader eyebrow="Progress" title="Goals" description="Turn your health data into measurable outcomes." action={<PillButton onClick={() => setEditing("new")} className="bg-ink text-white"><Plus size={16}/>New goal</PillButton>}/>
+    )}
     {error && <p className="mb-4 rounded-2xl bg-[#fff1ef] p-4 text-sm font-semibold text-coral">{error}</p>}
     <SegmentedControl options={["Active", "Completed"]} value={tab} onChange={setTab}/>
     {loading ? <div className="mt-4 h-48 animate-pulse rounded-card bg-surface"/> : visible.length ? <Card className="mt-4 overflow-hidden px-4 sm:px-5">

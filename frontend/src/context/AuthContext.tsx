@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { AuthContext, type AuthContextValue } from "./auth";
 import { api } from "../services/api";
-import { supabase } from "../lib/supabase";
+import { isPreviewMode, supabase } from "../lib/supabase";
 import type { User } from "../types";
 
 const appUser = (user: SupabaseUser | null): User | null => {
@@ -20,6 +20,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (isPreviewMode) {
+      setUser({ name: "Adhiraj Dogra", email: "adhiraj@example.com" });
+      setLoading(false);
+      return;
+    }
     let active = true;
     void supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
@@ -88,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return Boolean(data.session);
       },
       logout: async () => {
+        if (isPreviewMode) return;
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
         setUser(null);

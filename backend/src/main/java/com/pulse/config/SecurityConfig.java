@@ -1,6 +1,7 @@
 package com.pulse.config;
 
 import com.pulse.security.SupabaseUserProvisioningFilter;
+import com.pulse.security.PreviewAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.http.HttpMethod;
@@ -23,7 +24,8 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             JwtAuthenticationConverter jwtAuthConverter,
-                                            SupabaseUserProvisioningFilter provisioningFilter) throws Exception {
+                                            SupabaseUserProvisioningFilter provisioningFilter,
+                                            PreviewAuthenticationFilter previewAuthenticationFilter) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -34,6 +36,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthConverter)))
+                .addFilterBefore(previewAuthenticationFilter, BearerTokenAuthenticationFilter.class)
                 .addFilterAfter(provisioningFilter, BearerTokenAuthenticationFilter.class)
                 .build();
     }
@@ -52,7 +55,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(List.of(corsOrigin, "http://localhost:*", "http://127.0.0.1:*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Circle-Preview"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

@@ -10,7 +10,7 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { FormField, inputClass, PillButton } from "../components/ui";
 import { useAuth } from "../context/auth";
 import { BrandLogo } from "../components/BrandLogo";
-import { supabase } from "../lib/supabase";
+import { isSupabaseConfigured, supabase } from "../lib/supabase";
 
 export function AuthPage({ mode }: { mode: "login" | "register" }) {
   const { user, loading: authLoading, login, register } = useAuth();
@@ -119,6 +119,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
               : "Your personalised health workspace is a minute away."}
           </p>
           <form onSubmit={submit} className="mt-9 space-y-5">
+            {!isSupabaseConfigured && <p role="alert" className="rounded-xl bg-[#fff6e8] p-3 text-sm leading-5 text-warning">Authentication is not configured locally. Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to <code>frontend/.env</code>.</p>}
             {mode === "register" && (
               <><FormField label="Full name">
                 <input
@@ -160,7 +161,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
                 </label>
                 <button
                   type="button"
-                  disabled={loading}
+                  disabled={loading || !isSupabaseConfigured}
                   onClick={() => void requestPasswordReset()}
                   className="font-semibold text-ink hover:underline"
                 >
@@ -175,7 +176,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
                 {error}
               </p>
             )}
-            <PillButton disabled={loading} className="w-full bg-ink text-white">
+            <PillButton disabled={loading || !isSupabaseConfigured} className="w-full bg-ink text-white">
               {loading
                 ? "Please wait…"
                 : mode === "login"

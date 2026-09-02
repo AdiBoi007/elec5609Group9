@@ -8,17 +8,17 @@ type Result = { key: string; label: string; detail: string; to?: string; icon: t
 const commands: Result[] = [
   { key: "dashboard", label: "Dashboard", detail: "Today’s health overview", to: "/dashboard", icon: LayoutDashboard },
   { key: "log", label: "Log health data", detail: "Meal, workout, water, sleep or body", to: "/log", icon: CirclePlus },
-  { key: "workouts", label: "Workouts", detail: "History and exercise library", to: "/workouts", icon: Dumbbell },
-  { key: "nutrition", label: "Nutrition", detail: "Meals and macro targets", to: "/nutrition", icon: Utensils },
+  { key: "exercises", label: "Exercise Library", detail: "Movements, technique and favourites", to: "/exercises", icon: Dumbbell },
+  { key: "foods", label: "Food Library", detail: "Foods, servings and nutrition", to: "/foods", icon: Utensils },
   { key: "progress", label: "Progress", detail: "Calendar and trends", to: "/progress", icon: BarChart3 },
-  { key: "goals", label: "View goals", detail: "Progress, timelines and projections", to: "/goals", icon: Target },
-  { key: "new-goal", label: "Create goal", detail: "Set a measurable health target", to: "/goals?new=1", icon: Target },
-  { key: "plans", label: "Plans", detail: "Workout, meal and grocery plans", to: "/plans", icon: Target },
-  { key: "insights", label: "Ask Circle", detail: "Questions and personalised recommendations", to: "/insights", icon: Brain },
+  { key: "goals", label: "View goals", detail: "Progress, timelines and projections", to: "/progress?tab=goals", icon: Target },
+  { key: "new-goal", label: "Create goal", detail: "Set a measurable health target", to: "/progress?tab=goals&new=1", icon: Target },
+  { key: "plans", label: "Meal Planner", detail: "Meal plans and grocery lists", to: "/meal-planner", icon: Target },
+  { key: "insights", label: "Circle AI", detail: "Questions and personalised recommendations", to: "/ai", icon: Brain },
   { key: "settings", label: "Settings", detail: "Profile, diet, targets and reminders", to: "/settings", icon: Settings },
-  { key: "water", label: "Water history", detail: "Hydration detail", to: "/water", icon: Apple },
-  { key: "sleep", label: "Sleep history", detail: "Recovery detail", to: "/sleep", icon: Apple },
-  { key: "body", label: "Body measurements", detail: "Weight and measurements", to: "/body", icon: Apple },
+  { key: "water", label: "Log water", detail: "Hydration logging", to: "/log?tab=water", icon: Apple },
+  { key: "sleep", label: "Log sleep", detail: "Recovery logging", to: "/log?tab=sleep", icon: Apple },
+  { key: "body", label: "Body measurements", detail: "Weight and measurements", to: "/log?tab=body", icon: Apple },
 ];
 
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -34,11 +34,11 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     void Promise.allSettled([api.getExercises(), api.getFoods(), api.getWorkouts(), api.getMealPlans(), api.getWorkoutPlans()]).then((results) => {
       const [exercises, foods, workouts, meals, workoutPlans] = results.map(result => result.status === "fulfilled" ? result.value : []);
       setRemote([
-        ...(exercises as Awaited<ReturnType<typeof api.getExercises>>).slice(0, 60).map(item => ({ key: `exercise-${item.id}`, label: item.name, detail: `${item.muscleGroup} · ${item.equipment}`, to: `/workouts?tab=library&query=${encodeURIComponent(item.name)}`, icon: Dumbbell })),
-        ...(foods as Awaited<ReturnType<typeof api.getFoods>>).slice(0, 40).map(item => ({ key: `food-${item.id}`, label: item.name, detail: "Food", to: `/log?type=Meal&food=${encodeURIComponent(item.name)}`, icon: Utensils })),
+        ...(exercises as Awaited<ReturnType<typeof api.getExercises>>).slice(0, 60).map(item => ({ key: `exercise-${item.id}`, label: item.name, detail: `${item.muscleGroup} · ${item.equipment}`, to: `/exercises?query=${encodeURIComponent(item.name)}`, icon: Dumbbell })),
+        ...(foods as Awaited<ReturnType<typeof api.getFoods>>).slice(0, 40).map(item => ({ key: `food-${item.id}`, label: item.name, detail: "Food", to: `/foods?query=${encodeURIComponent(item.name)}`, icon: Utensils })),
         ...(workouts as Awaited<ReturnType<typeof api.getWorkouts>>).slice(0, 20).map(item => ({ key: `workout-${item.id}`, label: item.name, detail: "Workout history", to: `/workouts/${item.id}`, icon: Dumbbell })),
-        ...(meals as Awaited<ReturnType<typeof api.getMealPlans>>).slice(0, 10).map(item => ({ key: `meal-plan-${item.id}`, label: item.name, detail: "Meal plan", to: "/plans?tab=meals", icon: Target })),
-        ...(workoutPlans as Awaited<ReturnType<typeof api.getWorkoutPlans>>).slice(0, 10).map(item => ({ key: `workout-plan-${item.id}`, label: item.name, detail: "Workout plan", to: "/plans?tab=workouts", icon: Target })),
+        ...(meals as Awaited<ReturnType<typeof api.getMealPlans>>).slice(0, 10).map(item => ({ key: `meal-plan-${item.id}`, label: item.name, detail: "Meal plan", to: "/meal-planner?tab=meals", icon: Target })),
+        ...(workoutPlans as Awaited<ReturnType<typeof api.getWorkoutPlans>>).slice(0, 10).map(item => ({ key: `workout-plan-${item.id}`, label: item.name, detail: "Workout plan", to: "/ai?tab=workout-plan", icon: Target })),
       ]);
     });
     return () => window.removeEventListener("keydown", close);
@@ -49,12 +49,12 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     const water = needle.match(/^(\d+(?:\.\d+)?)\s*(ml|l)(?:\s+water)?$/);
     if (water) { const amount = Math.round(Number(water[1]) * (water[2] === "l" ? 1000 : 1)); if (amount > 0 && amount <= 5000) dynamic.push({ key:"quick-water", label:`Log ${amount.toLocaleString()} ml water`, detail:"Add directly to today’s hydration", icon:Droplets, action:async()=>{setWorking("Adding water…");await api.addWater(amount);} }); }
     const weight = needle.match(/^(?:log\s+)?(\d{2,3}(?:\.\d+)?)\s*kg$/);
-    if (weight) dynamic.push({key:"quick-weight",label:`Log ${weight[1]} kg`,detail:"Open body logging with this value",to:`/log?type=Body&weight=${weight[1]}`,icon:Target});
-    if (needle.includes("scan barcode")) dynamic.push({key:"scan",label:"Scan barcode",detail:"Open nutrition barcode scanner",to:"/log?type=Meal&scan=1",icon:Utensils});
-    if (needle.includes("start workout") || needle.includes("build workout")) dynamic.push({key:"start-workout",label:"Build a workout",detail:"Open the workout builder",to:"/workouts/new",icon:Dumbbell});
+    if (weight) dynamic.push({key:"quick-weight",label:`Log ${weight[1]} kg`,detail:"Open body logging with this value",to:`/log?tab=body&weight=${weight[1]}`,icon:Target});
+    if (needle.includes("scan barcode")) dynamic.push({key:"scan",label:"Scan barcode",detail:"Open nutrition barcode scanner",to:"/log?tab=meal&scan=1",icon:Utensils});
+    if (needle.includes("start workout") || needle.includes("build workout")) dynamic.push({key:"start-workout",label:"Build a workout",detail:"Open the workout logger",to:"/log?tab=workout",icon:Dumbbell});
     if (needle.includes("open calendar") || needle.includes("show progress")) dynamic.push({key:"open-calendar",label:"Open health calendar",detail:"Review daily adherence",to:"/progress",icon:BarChart3});
-    if (needle.startsWith("goal ")) dynamic.push({key:"parsed-goal",label:"Create a trackable goal",detail:query.trim(),to:"/goals?new=1",icon:Target});
-    if (/^(why|how|what|when|which|am i|suggest)/.test(needle)) dynamic.push({key:"ask-circle",label:"Ask Circle",detail:query.trim(),to:`/insights?q=${encodeURIComponent(query.trim())}`,icon:Brain});
+    if (needle.startsWith("goal ")) dynamic.push({key:"parsed-goal",label:"Create a trackable goal",detail:query.trim(),to:"/progress?tab=goals&new=1",icon:Target});
+    if (/^(why|how|what|when|which|am i|suggest)/.test(needle)) dynamic.push({key:"ask-circle",label:"Ask Circle",detail:query.trim(),to:`/ai?q=${encodeURIComponent(query.trim())}`,icon:Brain});
     return [...dynamic, ...commands, ...remote].filter(item => dynamic.includes(item) || !needle || `${item.label} ${item.detail}`.toLowerCase().includes(needle)).slice(0, 12);
   }, [query, remote]);
   const select = async (result: Result) => { if (result.action) { try { await result.action(); } finally { setWorking(""); } } if (result.to) navigate(result.to); onClose(); };

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { BarChart3, Bell, Brain, CirclePlus, Dumbbell, LayoutDashboard, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Search, Settings, Sun, Target, UserRound, X } from "lucide-react";
+import { Apple, BarChart3, Bell, Brain, CalendarRange, CirclePlus, Dumbbell, LayoutDashboard, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Search, Settings, Sun, UserRound, X } from "lucide-react";
 import { useAuth } from "../context/auth";
 import { useTheme } from "../context/theme";
 import { api } from "../services/api";
@@ -15,9 +15,10 @@ const ONBOARDING_DISMISSED_KEY = "pulse_onboarding_dismissed";
 const navGroups = [
   { label: "Today", items: [{ label: "Dashboard", to: "/dashboard", icon: LayoutDashboard }] },
   { label: "Log", items: [{ label: "Log", to: "/log", icon: CirclePlus }] },
-  { label: "Progress", items: [{ label: "Progress", to: "/progress", icon: BarChart3 }, { label: "Goals", to: "/goals", icon: Target }] },
-  { label: "Plan", items: [{ label: "Plans", to: "/plans", icon: Dumbbell }] },
-  { label: "Circle AI", items: [{ label: "Ask Circle", to: "/insights", icon: Brain }] },
+  { label: "Progress", items: [{ label: "Progress", to: "/progress", icon: BarChart3 }] },
+  { label: "Libraries", items: [{ label: "Food Library", to: "/foods", icon: Apple }, { label: "Exercise Library", to: "/exercises", icon: Dumbbell }] },
+  { label: "Plan", items: [{ label: "Meal Planner", to: "/meal-planner", icon: CalendarRange }] },
+  { label: "Circle AI", items: [{ label: "Circle AI", to: "/ai", icon: Brain }] },
   { label: "Account", items: [{ label: "Settings", to: "/settings", icon: Settings }] },
 ];
 

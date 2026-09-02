@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "re
 import {
   ArrowRight,
   ArrowUp,
+  Brain,
   CheckCircle2,
+  Dumbbell,
   ExternalLink,
   LoaderCircle,
   RotateCcw,
@@ -11,8 +13,9 @@ import {
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { BrandMark } from "../components/BrandLogo";
+import { Card, FormField, inputClass, PageHeader, PillButton } from "../components/ui";
 import { api } from "../services/api";
-import type { FinishDayResponse, MealSuggestionResponse, PulseAnswer } from "../types";
+import type { FinishDayResponse, MealPlanRecord, MealSuggestionResponse, PulseAnswer, WorkoutPlanRecord } from "../types";
 
 type ChatMessage =
   | { id: string; role: "user"; kind: "text"; text: string }
@@ -30,7 +33,7 @@ const prompts = [
 
 export default function InsightsPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [asking, setAsking] = useState(false);
@@ -93,7 +96,7 @@ export default function InsightsPage() {
         await api.addWater(action.waterMl);
         setMessages((current) => [
           ...current,
-          { id: id(), role: "assistant", kind: "answer", answer: { title: "Water logged", summary: `${action.waterMl} ml has been added to today’s hydration.`, evidence: [], actions: [{ label: "View hydration", to: "/water" }], disclaimer: "", generatedByAi: false } },
+          { id: id(), role: "assistant", kind: "answer", answer: { title: "Water logged", summary: `${action.waterMl} ml has been added to today’s hydration.`, evidence: [], actions: [{ label: "View hydration", to: "/log?tab=water" }], disclaimer: "", generatedByAi: false } },
         ]);
       } catch (reason) {
         addError(reason);
@@ -121,7 +124,13 @@ export default function InsightsPage() {
     }
   };
 
+  const aiTab = searchParams.get("tab") === "meal-plan" || searchParams.get("tab") === "workout-plan" ? searchParams.get("tab")! : "ask";
+  const changeTab = (next: string) => { const params = new URLSearchParams(searchParams); if (next === "ask") params.delete("tab"); else params.set("tab", next); setSearchParams(params); };
+  if (aiTab !== "ask") return <CirclePlanGenerator mode={aiTab as "meal-plan" | "workout-plan"} onTabChange={changeTab}/>;
+
   return (
+    <>
+    <CircleAiTabs value="ask" onChange={changeTab}/>
     <div className="mx-auto flex min-h-[calc(100vh-112px)] max-w-[960px] flex-col">
       <header className="flex items-center gap-3 border-b border-line pb-4">
         <span className="grid size-11 place-items-center rounded-2xl border border-line bg-surface shadow-sm">
@@ -198,8 +207,33 @@ export default function InsightsPage() {
         <p className="mt-2 text-center text-[10px] text-muted">Circle can make mistakes. Guidance is general wellness information, not medical diagnosis.</p>
       </footer>
     </div>
+    </>
   );
 }
+
+function CircleAiTabs({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return <div className="mb-5 flex max-w-full gap-1 overflow-x-auto rounded-full bg-surface-muted p-1" role="tablist" aria-label="Circle AI modes">{[["ask", "Ask Circle"], ["meal-plan", "Meal Plan"], ["workout-plan", "Workout Plan"]].map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={value === key} onClick={() => onChange(key)} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold ${value === key ? "bg-surface text-ink shadow-sm" : "text-muted"}`}>{label}</button>)}</div>;
+}
+
+function CirclePlanGenerator({ mode, onTabChange }: { mode: "meal-plan" | "workout-plan"; onTabChange: (value: string) => void }) {
+  const isMeal = mode === "meal-plan";
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState("");
+  const [meal, setMeal] = useState<MealPlanRecord | null>(null);
+  const [workout, setWorkout] = useState<WorkoutPlanRecord | null>(null);
+  const [savedWorkouts, setSavedWorkouts] = useState<WorkoutPlanRecord[]>([]);
+  const [mealForm, setMealForm] = useState({ calorieTarget: 2200, proteinTarget: 150, carbohydrateTarget: 250, fatTarget: 70, dietaryPreference: "Balanced", allergies: "", dislikedFoods: "", mealsPerDay: 4 });
+  const [workoutForm, setWorkoutForm] = useState({ fitnessGoal: "General fitness", experienceLevel: "Intermediate", daysPerWeek: 4, workoutDuration: 60, availableEquipment: ["Dumbbells", "Machine"], preferences: "Balanced full-body training" });
+  useEffect(() => { api.getProfile().then((profile) => { setMealForm((current) => ({ ...current, calorieTarget: profile.calorieTarget ?? current.calorieTarget, proteinTarget: profile.proteinTarget ?? current.proteinTarget, carbohydrateTarget: profile.carbTarget ?? current.carbohydrateTarget, fatTarget: profile.fatTarget ?? current.fatTarget, dietaryPreference: profile.dietarySummary || profile.dietaryPreferences || current.dietaryPreference, allergies: profile.dietaryProfile?.allergies.join(", ") ?? "", dislikedFoods: profile.dietaryProfile?.dislikedFoods.join(", ") || profile.dislikedIngredients || "", mealsPerDay: profile.dietaryProfile?.preferredMealsPerDay ?? current.mealsPerDay })); setWorkoutForm((current) => ({ ...current, fitnessGoal: profile.fitnessGoal || current.fitnessGoal })); }).catch(() => undefined).finally(() => setLoading(false)); }, []);
+  useEffect(() => { if (!isMeal) void api.getWorkoutPlans().then((items) => { setSavedWorkouts(items); setWorkout((current) => current ?? items[0] ?? null); }).catch(() => undefined); }, [isMeal]);
+  const generate = async () => { setGenerating(true); setError(""); try { if (isMeal) setMeal(await api.generateMealPlan(mealForm)); else { const generated = await api.generateWorkoutPlan(workoutForm); setWorkout(generated); setSavedWorkouts((current) => [generated, ...current]); } } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to generate this plan"); } finally { setGenerating(false); } };
+  const result = isMeal ? meal : workout;
+  return <div><CircleAiTabs value={mode} onChange={onTabChange}/><PageHeader eyebrow="Circle AI" title={isMeal ? "AI Meal Plan" : "AI Workout Plan"} description={isMeal ? "Generate a seven-day plan from your persisted targets and dietary profile." : "Generate a structured training week from your goal, experience and equipment."}/>{error && <p role="alert" className="mb-4 rounded-2xl bg-[#fff1ef] p-4 text-sm font-semibold text-coral">{error}</p>}<div className="grid gap-4 xl:grid-cols-[360px_1fr]"><Card className="p-5"><div className="flex items-center gap-2"><span className="grid size-9 place-items-center rounded-xl bg-[#eeeaff] text-violet">{isMeal ? <Utensils size={17}/> : <Dumbbell size={17}/>}</span><div><h2 className="font-bold">Plan inputs</h2><p className="text-xs text-muted">Seeded from your saved profile</p></div></div>{loading ? <div className="mt-5 h-52 animate-pulse rounded-2xl bg-surface-muted"/> : isMeal ? <div className="mt-5 grid gap-4"><div className="grid grid-cols-2 gap-3"><NumberField label="Calories" value={mealForm.calorieTarget} onChange={(value) => setMealForm({ ...mealForm, calorieTarget: value })}/><NumberField label="Protein (g)" value={mealForm.proteinTarget} onChange={(value) => setMealForm({ ...mealForm, proteinTarget: value })}/><NumberField label="Carbs (g)" value={mealForm.carbohydrateTarget} onChange={(value) => setMealForm({ ...mealForm, carbohydrateTarget: value })}/><NumberField label="Fat (g)" value={mealForm.fatTarget} onChange={(value) => setMealForm({ ...mealForm, fatTarget: value })}/></div><FormField label="Dietary preference"><input className={inputClass} value={mealForm.dietaryPreference} onChange={(event) => setMealForm({ ...mealForm, dietaryPreference: event.target.value })}/></FormField><NumberField label="Meals per day" value={mealForm.mealsPerDay} onChange={(value) => setMealForm({ ...mealForm, mealsPerDay: value })}/></div> : <div className="mt-5 grid gap-4"><FormField label="Fitness goal"><input className={inputClass} value={workoutForm.fitnessGoal} onChange={(event) => setWorkoutForm({ ...workoutForm, fitnessGoal: event.target.value })}/></FormField><FormField label="Experience"><select className={inputClass} value={workoutForm.experienceLevel} onChange={(event) => setWorkoutForm({ ...workoutForm, experienceLevel: event.target.value })}><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></FormField><div className="grid grid-cols-2 gap-3"><NumberField label="Days / week" value={workoutForm.daysPerWeek} onChange={(value) => setWorkoutForm({ ...workoutForm, daysPerWeek: value })}/><NumberField label="Minutes" value={workoutForm.workoutDuration} onChange={(value) => setWorkoutForm({ ...workoutForm, workoutDuration: value })}/></div><FormField label="Preferences"><textarea className={`${inputClass} h-24 py-3`} value={workoutForm.preferences} onChange={(event) => setWorkoutForm({ ...workoutForm, preferences: event.target.value })}/></FormField></div>}{!isMeal && savedWorkouts.length > 0 && <FormField label="Saved workout plans"><select className={inputClass} value={workout?.id ?? ""} onChange={(event) => setWorkout(savedWorkouts.find((item) => item.id === Number(event.target.value)) ?? null)}>{savedWorkouts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FormField>}<PillButton disabled={loading || generating} onClick={() => void generate()} className="mt-5 w-full bg-ink text-white"><Sparkles size={16}/>{generating ? "Generating…" : "Generate and save plan"}</PillButton></Card><Card className="min-h-[420px] p-5 md:p-6">{!result ? <div className="grid h-full min-h-[360px] place-items-center text-center"><div><Brain className="mx-auto text-violet"/><h2 className="mt-3 font-bold">Your plan will appear here</h2><p className="mt-1 text-sm text-muted">Generation is persisted by the backend and labelled by source.</p></div></div> : isMeal && meal ? <div><PlanSource generated={meal.plan.generatedByAi}/><h2 className="mt-2 text-2xl font-bold">{meal.plan.name}</h2><p className="mt-2 text-sm leading-6 text-muted">{meal.plan.summary}</p><div className="mt-5 space-y-3">{meal.plan.days.map((day) => <div key={day.day} className="rounded-2xl bg-surface-muted p-4"><h3 className="font-bold">{day.day}</h3><p className="mt-2 text-xs leading-5 text-muted">{day.meals.map((item) => `${item.name} (${item.calories} kcal)`).join(" · ")}</p></div>)}</div><Link to="/meal-planner" className="mt-5 inline-flex text-sm font-bold text-coral">Open saved plan in Meal Planner <ArrowRight size={15} className="ml-1"/></Link></div> : workout ? <div><PlanSource generated={workout.plan.generatedByAi}/><h2 className="mt-2 text-2xl font-bold">{workout.plan.name}</h2><p className="mt-2 text-sm leading-6 text-muted">{workout.plan.summary}</p><div className="mt-5 grid gap-3 md:grid-cols-2">{workout.plan.days.map((day) => <div key={day.name} className="rounded-2xl bg-surface-muted p-4"><h3 className="font-bold">{day.name}</h3><p className="text-xs text-muted">{day.focus}</p><ul className="mt-3 space-y-2 text-xs">{day.exercises.map((exercise) => <li key={exercise.name}>{exercise.name} · {exercise.sets} × {exercise.reps}</li>)}</ul></div>)}</div></div> : null}</Card></div></div>;
+}
+
+function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) { return <FormField label={label}><input type="number" min="1" className={inputClass} value={value} onChange={(event) => onChange(Number(event.target.value))}/></FormField>; }
+function PlanSource({ generated }: { generated: boolean }) { return <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold uppercase ${generated ? "bg-[#eeeaff] text-violet" : "bg-surface-muted text-muted"}`}>{generated ? "AI generated" : "Deterministic fallback"}</span>; }
 
 function AssistantAvatar() {
   return <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-line bg-surface"><BrandMark className="size-6" /></span>;
@@ -237,7 +271,7 @@ function MealMessage({ response }: { response: MealSuggestionResponse }) {
     <p className="text-[10px] font-bold uppercase tracking-[.12em] text-coral">Based on today’s remaining targets</p>
     <h2 className="mt-1 text-base font-bold">Three practical meal directions</h2>
     <p className="mt-2 text-sm leading-6 text-muted">You have approximately {response.remainingCalories} kcal and {response.remainingProtein} g protein remaining. These options are filtered through your saved dietary pattern.</p>
-    <div className="mt-4 max-w-3xl divide-y divide-line border-y border-line">{response.suggestions.map((item) => <div key={item.name} className="grid gap-2 py-3 sm:grid-cols-[1fr_auto_auto] sm:items-center"><div><p className="text-sm font-bold">{item.name}</p><p className="mt-1 text-xs leading-5 text-muted">{item.ingredients}</p></div><p className="text-xs font-bold">{item.calories} kcal · {item.protein}P</p><Link to={`/log?type=Meal&food=${encodeURIComponent(item.name)}`} className="inline-flex items-center gap-1 text-xs font-bold text-coral">Build meal <ArrowRight size={12} /></Link></div>)}</div>
+    <div className="mt-4 max-w-3xl divide-y divide-line border-y border-line">{response.suggestions.map((item) => <div key={item.name} className="grid gap-2 py-3 sm:grid-cols-[1fr_auto_auto] sm:items-center"><div><p className="text-sm font-bold">{item.name}</p><p className="mt-1 text-xs leading-5 text-muted">{item.ingredients}</p></div><p className="text-xs font-bold">{item.calories} kcal · {item.protein}P</p><Link to={`/log?tab=meal&food=${encodeURIComponent(item.name)}`} className="inline-flex items-center gap-1 text-xs font-bold text-coral">Build meal <ArrowRight size={12} /></Link></div>)}</div>
     <p className="mt-3 text-[10px] text-muted">{response.disclaimer}</p>
   </div>;
 }

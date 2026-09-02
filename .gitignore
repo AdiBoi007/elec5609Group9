@@ -22,3 +22,5 @@ CLAUDE.local.md
 /docs-personal/
 .gstack/
 /output/sql/migrate-fk-on-delete-cascade.sql
+.vercel
+.env*

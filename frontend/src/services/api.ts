@@ -32,7 +32,7 @@ import type {
   FinishDayResponse,
   TodaySummary,
 } from "../types";
-import { supabase } from "../lib/supabase";
+import { isPreviewMode, supabase } from "../lib/supabase";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
@@ -48,6 +48,7 @@ const request = async <T>(
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(isPreviewMode ? { "X-Circle-Preview": "true" } : {}),
       ...options.headers,
     },
   });

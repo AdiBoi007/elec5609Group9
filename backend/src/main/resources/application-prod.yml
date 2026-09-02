@@ -1,8 +1,17 @@
 spring:
+  main:
+    lazy-initialization: true
   jpa:
     open-in-view: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
+    properties:
+      hibernate:
+        archive:
+          autodetection: none
+        boot:
+          allow_jdbc_metadata_access: false
 
 server:
   forward-headers-strategy: framework

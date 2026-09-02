@@ -11,7 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.*;
 import java.util.*;
 
-@Configuration @RequiredArgsConstructor
+@Configuration @Profile("!prod") @RequiredArgsConstructor
 public class DataSeeder {
     private final UserRepository users;
     private final ExerciseRepository exercises;

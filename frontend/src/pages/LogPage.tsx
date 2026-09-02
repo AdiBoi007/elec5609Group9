@@ -78,8 +78,10 @@ const tabs: Array<{ name: LogType; icon: typeof Dumbbell; tone: string }> = [
 ];
 
 export default function LogPage() {
-  const [searchParams] = useSearchParams();
-  const requestedType = searchParams.get("type");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const legacyType = searchParams.get("type");
+  const requestedType = tabs.find((item) => item.name.toLowerCase() === requestedTab?.toLowerCase())?.name ?? legacyType;
   const [active, setActive] = useState<LogType>(
     tabs.some((tab) => tab.name === requestedType)
       ? (requestedType as LogType)
@@ -204,6 +206,15 @@ export default function LogPage() {
       setActive(requestedType as LogType);
     if (searchParams.get("scan") === "1") setScannerOpen(true);
   }, [requestedType, searchParams]);
+
+  const chooseTab = (name: LogType) => {
+    setActive(name);
+    setError("");
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", name.toLowerCase());
+    next.delete("type");
+    setSearchParams(next, { replace: true });
+  };
 
   const succeed = async (message: string) => {
     await loadToday();
@@ -524,8 +535,7 @@ export default function LogPage() {
             <button
               key={label}
               onClick={() => {
-                setActive(type);
-                setError("");
+                chooseTab(type);
                 document
                   .getElementById("log-form")
                   ?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -550,8 +560,7 @@ export default function LogPage() {
                 <button
                   key={name}
                   onClick={() => {
-                    setActive(name);
-                    setError("");
+                    chooseTab(name);
                   }}
                   className={`flex min-w-0 flex-col items-center gap-1.5 rounded-[17px] px-1 py-3 text-[11px] font-bold transition sm:flex-row sm:justify-center sm:text-sm ${active === name ? "bg-white text-ink shadow-sm" : "text-muted hover:text-ink"}`}
                 >
@@ -1323,9 +1332,9 @@ export default function LogPage() {
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
                 {[
-                  ["Water history", "/water"],
-                  ["Sleep history", "/sleep"],
-                  ["Body history", "/body"],
+                  ["Water history", "/progress?tab=recovery"],
+                  ["Sleep history", "/progress?tab=recovery"],
+                  ["Body history", "/progress?tab=body"],
                 ].map(([label, to]) => (
                   <Link
                     key={to}

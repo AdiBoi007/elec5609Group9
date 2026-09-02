@@ -385,13 +385,13 @@ export default function PlansPage() {
     <div>
       <PageHeader
         eyebrow="Planning"
-        title="Plans"
-        description="Turn your goals into a week you can actually follow."
+        title="Meal Planner"
+        description="Build practical meal plans and turn them into editable grocery lists."
         action={headerAction}
       />
       <div className="mb-5">
         <SegmentedControl
-          options={["Meal plans", "Grocery list", "Workout plans"]}
+          options={["Meal plans", "Grocery list"]}
           value={tab}
           onChange={setTab}
         />
