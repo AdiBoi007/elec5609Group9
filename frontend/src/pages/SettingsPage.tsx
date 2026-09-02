@@ -52,11 +52,11 @@ export default function SettingsPage() {
     name: "",
     email: "",
     age: 0,
-    gender: "Male",
+    gender: "",
     height: 0,
     weight: 0,
-    activityLevel: "Moderately active",
-    fitnessGoal: "MAINTAIN",
+    activityLevel: "",
+    fitnessGoal: "",
   });
   const [notifications, setNotifications] = useState<
     Record<ReminderKey, boolean>
@@ -112,6 +112,9 @@ export default function SettingsPage() {
       return setError("Height must be between 80 and 250 cm.");
     if (profile.weight < 25 || profile.weight > 500)
       return setError("Weight must be between 25 and 500 kg.");
+    if (!profile.gender) return setError("Select your gender.");
+    if (!profile.activityLevel) return setError("Select your activity level.");
+    if (!profile.fitnessGoal) return setError("Select your fitness goal.");
     if (!profile.dietaryProfile?.dietaryPattern)
       return setError("Choose a dietary pattern in Diet settings.");
     if (
@@ -264,7 +267,8 @@ export default function SettingsPage() {
                         max={key === "age" ? 120 : key === "height" ? 250 : 500}
                         step={key === "age" ? 1 : 0.1}
                         className={inputClass}
-                        value={profile[key as "age" | "height" | "weight"]}
+                        placeholder={key === "age" ? "Years" : key === "height" ? "cm" : "kg"}
+                        value={profile[key as "age" | "height" | "weight"] || ""}
                         onChange={(event) =>
                           setProfile({
                             ...profile,
@@ -282,6 +286,9 @@ export default function SettingsPage() {
                         setProfile({ ...profile, gender: event.target.value })
                       }
                     >
+                      <option value="" disabled>
+                        Select…
+                      </option>
                       <option>Male</option>
                       <option>Female</option>
                       <option>Non-binary</option>
@@ -299,6 +306,9 @@ export default function SettingsPage() {
                         })
                       }
                     >
+                      <option value="" disabled>
+                        Select…
+                      </option>
                       <option>Lightly active</option>
                       <option>Moderately active</option>
                       <option>Very active</option>
@@ -315,6 +325,9 @@ export default function SettingsPage() {
                         })
                       }
                     >
+                      <option value="" disabled>
+                        Select…
+                      </option>
                       {FITNESS_GOALS.map((goal) => (
                         <option key={goal.value} value={goal.value}>
                           {goal.label}
