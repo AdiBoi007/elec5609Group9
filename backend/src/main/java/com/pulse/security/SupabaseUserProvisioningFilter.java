@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -28,7 +29,13 @@ public class SupabaseUserProvisioningFilter extends OncePerRequestFilter {
         if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
             String email = jwt.getClaimAsString("email");
             if (email != null && !users.existsByEmailIgnoreCase(email)) {
-                provisioning.provision(jwt);
+                try {
+                    provisioning.provision(jwt);
+                } catch (DataIntegrityViolationException race) {
+                    // A concurrent first request from the same new user already
+                    // inserted the app_users row (unique email). That request's
+                    // transaction won; this one can safely proceed.
+                }
             }
         }
         chain.doFilter(req, res);
