@@ -48,6 +48,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [attempted, setAttempted] = useState(false);
   const [profile, setProfile] = useState<UserProfile>({
     name: "",
     email: "",
@@ -103,18 +104,21 @@ export default function SettingsPage() {
       )
       .finally(() => setLoading(false));
   }, []);
+  const errorClass = "!border-coral ring-2 ring-coral/25 focus:!border-coral";
+  const fieldErrors: Record<string, boolean> = {
+    name: attempted && !profile.name.trim(),
+    age: attempted && !(profile.age >= 13 && profile.age <= 120),
+    height: attempted && !(profile.height >= 80 && profile.height <= 250),
+    weight: attempted && !(profile.weight >= 25 && profile.weight <= 500),
+    gender: attempted && !profile.gender,
+    activityLevel: attempted && !profile.activityLevel,
+    fitnessGoal: attempted && !profile.fitnessGoal,
+  };
   const saveProfile = async () => {
     setError("");
-    if (!profile.name.trim()) return setError("Name is required.");
-    if (profile.age < 13 || profile.age > 120)
-      return setError("Age must be between 13 and 120.");
-    if (profile.height < 80 || profile.height > 250)
-      return setError("Height must be between 80 and 250 cm.");
-    if (profile.weight < 25 || profile.weight > 500)
-      return setError("Weight must be between 25 and 500 kg.");
-    if (!profile.gender) return setError("Select your gender.");
-    if (!profile.activityLevel) return setError("Select your activity level.");
-    if (!profile.fitnessGoal) return setError("Select your fitness goal.");
+    setAttempted(true);
+    if (Object.values(fieldErrors).some(Boolean))
+      return setError("Please complete the highlighted fields.");
     if (!profile.dietaryProfile?.dietaryPattern)
       return setError("Choose a dietary pattern in Diet settings.");
     if (
@@ -126,6 +130,7 @@ export default function SettingsPage() {
     try {
       await api.updateProfile({ ...profile, name: profile.name.trim() });
       setProfile(await api.getProfile());
+      setAttempted(false);
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1600);
     } catch (reason) {
@@ -248,7 +253,7 @@ export default function SettingsPage() {
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <FormField label="Name">
                     <input
-                      className={inputClass}
+                      className={`${inputClass} ${fieldErrors.name ? errorClass : ""}`}
                       value={profile.name}
                       onChange={(event) =>
                         setProfile({ ...profile, name: event.target.value })
@@ -266,7 +271,7 @@ export default function SettingsPage() {
                         min={key === "age" ? 13 : key === "height" ? 80 : 25}
                         max={key === "age" ? 120 : key === "height" ? 250 : 500}
                         step={key === "age" ? 1 : 0.1}
-                        className={inputClass}
+                        className={`${inputClass} ${fieldErrors[key] ? errorClass : ""}`}
                         placeholder={key === "age" ? "Years" : key === "height" ? "cm" : "kg"}
                         value={profile[key as "age" | "height" | "weight"] || ""}
                         onChange={(event) =>
@@ -280,7 +285,7 @@ export default function SettingsPage() {
                   ))}
                   <FormField label="Gender">
                     <select
-                      className={inputClass}
+                      className={`${inputClass} ${fieldErrors.gender ? errorClass : ""}`}
                       value={profile.gender}
                       onChange={(event) =>
                         setProfile({ ...profile, gender: event.target.value })
@@ -297,7 +302,7 @@ export default function SettingsPage() {
                   </FormField>
                   <FormField label="Activity level">
                     <select
-                      className={inputClass}
+                      className={`${inputClass} ${fieldErrors.activityLevel ? errorClass : ""}`}
                       value={profile.activityLevel}
                       onChange={(event) =>
                         setProfile({
@@ -316,7 +321,7 @@ export default function SettingsPage() {
                   </FormField>
                   <FormField label="Fitness goal">
                     <select
-                      className={inputClass}
+                      className={`${inputClass} ${fieldErrors.fitnessGoal ? errorClass : ""}`}
                       value={profile.fitnessGoal}
                       onChange={(event) =>
                         setProfile({
