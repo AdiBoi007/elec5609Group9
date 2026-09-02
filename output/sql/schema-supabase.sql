@@ -12,7 +12,7 @@
         updated_at timestamp(6) with time zone,
         name varchar(100) not null,
         email varchar(180) not null unique,
-        password_hash varchar(255) not null,
+        password_hash varchar(255),
         primary key (id)
     );
 
