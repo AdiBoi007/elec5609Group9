@@ -24,3 +24,6 @@ CLAUDE.local.md
 /output/sql/migrate-fk-on-delete-cascade.sql
 .vercel
 .env*
+
+.vercel
+.env*
