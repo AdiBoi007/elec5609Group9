@@ -1,6 +1,9 @@
 spring:
-  main:
-    lazy-initialization: true
+  # NOTE: do NOT enable spring.main.lazy-initialization here. On Vercel's
+  # container runtime the app must be fully ready within a startup window;
+  # lazy init defers bean/JPA/DB setup into the first request, pushing it past
+  # that window -> "Application initialization timed out" -> container killed
+  # -> cold-start loop. Eager init keeps "Started" == truly ready.
   datasource:
     hikari:
       # Serverless instances scale horizontally; each should hold very few
