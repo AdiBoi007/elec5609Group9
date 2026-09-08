@@ -6,13 +6,17 @@ spring:
   # first request after a cold start, which is exactly when we want it fast.
   datasource:
     hikari:
-      # Serverless instances scale horizontally; each should hold very few
-      # connections against the Supabase transaction pooler (port 6543).
-      maximum-pool-size: 2
-      minimum-idle: 0
+      # One long-lived container against the Supabase session pooler (port 5432),
+      # so connections can be held and reused rather than churned. The pool is the
+      # whole service's concurrent DB capacity: sized for a small group using the
+      # app at once, not for one connection per user (a connection is only held
+      # for the duration of a transaction).
+      maximum-pool-size: 10
+      minimum-idle: 2
       connection-timeout: 10000
-      idle-timeout: 30000
-      max-lifetime: 280000
+      idle-timeout: 300000
+      # Retire connections well before the pooler would drop them server-side.
+      max-lifetime: 600000
   jpa:
     open-in-view: false
     database-platform: org.hibernate.dialect.PostgreSQLDialect
