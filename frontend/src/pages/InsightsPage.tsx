@@ -9,6 +9,7 @@ import {
   LoaderCircle,
   RotateCcw,
   Sparkles,
+  Trash2,
   Utensils,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -36,11 +37,35 @@ export default function InsightsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversationId, setConversationId] = useState<number | null>(null);
   const [asking, setAsking] = useState(false);
   const sequence = useRef(0);
   const initialQueryHandled = useRef(false);
   const endRef = useRef<HTMLDivElement>(null);
   const id = useCallback(() => String(++sequence.current), []);
+
+  // The assistant now remembers earlier turns, so reopening the page should show them
+  // rather than an empty thread the backend still has context for.
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const list = await api.listConversations();
+        if (!active || list.length === 0) return;
+        const detail = await api.getConversation(list[0].id);
+        if (!active) return;
+        setConversationId(detail.id);
+        setMessages(detail.messages.flatMap((message): ChatMessage[] => {
+          if (message.role === "USER") return [{ id: `s${message.id}`, role: "user", kind: "text", text: message.content }];
+          if (!message.answer) return [];
+          return [{ id: `s${message.id}`, role: "assistant", kind: "answer", answer: message.answer }];
+        }));
+      } catch {
+        // A failed restore must not block a new question.
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   const addError = useCallback((reason: unknown) => {
     setMessages((current) => [
@@ -61,14 +86,27 @@ export default function InsightsPage() {
     setQuestion("");
     setAsking(true);
     try {
-      const answer = await api.askPulse(clean);
+      const answer = await api.askPulse(clean, conversationId ?? undefined);
+      if (answer.conversationId) setConversationId(answer.conversationId);
       setMessages((current) => [...current, { id: id(), role: "assistant", kind: "answer", answer }]);
     } catch (reason) {
       addError(reason);
     } finally {
       setAsking(false);
     }
-  }, [addError, asking, id, question]);
+  }, [addError, asking, conversationId, id, question]);
+
+  const deleteCurrent = async () => {
+    if (conversationId === null) { setMessages([]); return; }
+    if (!window.confirm("Delete this conversation? This cannot be undone.")) return;
+    try {
+      await api.deleteConversation(conversationId);
+      setMessages([]);
+      setConversationId(null);
+    } catch (reason) {
+      addError(reason);
+    }
+  };
 
   const runAssistant = async (mode: "meal" | "finish") => {
     if (asking) return;
@@ -96,7 +134,7 @@ export default function InsightsPage() {
         await api.addWater(action.waterMl);
         setMessages((current) => [
           ...current,
-          { id: id(), role: "assistant", kind: "answer", answer: { title: "Water logged", summary: `${action.waterMl} ml has been added to today’s hydration.`, evidence: [], actions: [{ label: "View hydration", to: "/log?tab=water" }], disclaimer: "", generatedByAi: false } },
+          { id: id(), role: "assistant", kind: "answer", answer: { title: "Water logged", summary: `${action.waterMl} ml has been added to today’s hydration.`, evidence: [], actions: [{ label: "View hydration", to: "/log?tab=water" }], disclaimer: "", generatedByAi: false, conversationId: null } },
         ]);
       } catch (reason) {
         addError(reason);
@@ -144,9 +182,14 @@ export default function InsightsPage() {
           <p className="mt-0.5 text-xs text-muted">Personal guidance grounded in your Circle Health records.</p>
         </div>
         {messages.length > 0 && (
-          <button type="button" onClick={() => setMessages([])} className="ml-auto inline-flex h-9 items-center gap-2 rounded-full px-3 text-xs font-semibold text-muted transition hover:bg-surface-muted hover:text-ink">
-            <RotateCcw size={14} /> New chat
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            <button type="button" onClick={() => void deleteCurrent()} className="inline-flex h-9 items-center gap-2 rounded-full px-3 text-xs font-semibold text-muted transition hover:bg-[#fff1ef] hover:text-coral">
+              <Trash2 size={14} /> Delete
+            </button>
+            <button type="button" onClick={() => { setMessages([]); setConversationId(null); }} className="inline-flex h-9 items-center gap-2 rounded-full px-3 text-xs font-semibold text-muted transition hover:bg-surface-muted hover:text-ink">
+              <RotateCcw size={14} /> New chat
+            </button>
+          </div>
         )}
       </header>
 
@@ -166,6 +209,9 @@ export default function InsightsPage() {
                 </button>
               ))}
             </div>
+            <p className="mt-6 max-w-lg text-[11px] leading-5 text-muted">
+              Your conversations are saved to your account so you can pick up where you left off, and you can delete them at any time. Questions and the health data behind them are sent to an AI service to generate each answer.
+            </p>
             <div className="mt-3 flex flex-wrap justify-center gap-2">
               <button type="button" onClick={() => void runAssistant("meal")} className="rounded-full bg-[#fff1ef] px-4 py-2 text-xs font-bold text-coral"><Utensils size={14} className="mr-1.5 inline" />What should I eat?</button>
               <button type="button" onClick={() => void runAssistant("finish")} className="rounded-full bg-[#eeeaff] px-4 py-2 text-xs font-bold text-violet"><CheckCircle2 size={14} className="mr-1.5 inline" />Finish my day</button>

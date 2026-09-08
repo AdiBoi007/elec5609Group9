@@ -30,6 +30,8 @@ import type {
   PulseAnswer,
   MealSuggestionResponse,
   FinishDayResponse,
+  ConversationSummary,
+  ConversationDetail,
   TodaySummary,
 } from "../types";
 import { isPreviewMode, supabase } from "../lib/supabase";
@@ -119,7 +121,12 @@ export const api = {
     request<AiInsight>("/ai/insights", {
       method: "POST",
     }),
-  askPulse: (question: string) => request<PulseAnswer>("/ai/ask", { method: "POST", body: JSON.stringify({ question }) }),
+  askPulse: (question: string, conversationId?: number) =>
+    request<PulseAnswer>("/ai/ask", { method: "POST", body: JSON.stringify({ question, conversationId }) }),
+  listConversations: () => request<ConversationSummary[]>("/ai/conversations"),
+  getConversation: (id: number) => request<ConversationDetail>(`/ai/conversations/${id}`),
+  deleteConversation: (id: number) => request<void>(`/ai/conversations/${id}`, { method: "DELETE" }),
+  deleteAllConversations: () => request<void>("/ai/conversations", { method: "DELETE" }),
   getMealSuggestions: () => request<MealSuggestionResponse>("/ai/meal-suggestions"),
   finishDay: () => request<FinishDayResponse>("/ai/finish-day"),
   getReminders: () => request<Reminder[]>("/reminders"),
