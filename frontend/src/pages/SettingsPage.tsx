@@ -10,6 +10,7 @@ import {
   SlidersHorizontal,
   Sun,
   Target,
+  Trash2,
   UserRound,
   Utensils,
 } from "lucide-react";
@@ -49,6 +50,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [attempted, setAttempted] = useState(false);
+  const [conversationsCleared, setConversationsCleared] = useState(false);
   const [profile, setProfile] = useState<UserProfile>({
     name: "",
     email: "",
@@ -170,6 +172,17 @@ export default function SettingsPage() {
       );
     }
   };
+  const clearConversations = async () => {
+    if (!window.confirm("Delete all conversations? This cannot be undone.")) return;
+    setError("");
+    try {
+      await api.deleteAllConversations();
+      setConversationsCleared(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to delete your conversations");
+    }
+  };
+
   const download = async () => {
     setError("");
     try {
@@ -548,6 +561,24 @@ export default function SettingsPage() {
                     <Download size={15} />
                     Export CSV
                   </PillButton>
+                </div>
+                <div className="mt-6 border-t border-line pt-6">
+                  <p className="text-sm font-bold">Assistant conversations</p>
+                  <p className="mt-1 text-xs leading-5 text-muted">
+                    Your conversations with Ask Circle are saved to your account so you can pick up
+                    where you left off. Questions and the health data behind them are sent to an AI
+                    service to generate each answer; deleting a conversation removes it from Circle
+                    Health but cannot recall what was already sent.
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <PillButton onClick={() => void clearConversations()} className="bg-[#fff1ef] text-coral">
+                      <Trash2 size={15} />
+                      Delete all conversations
+                    </PillButton>
+                    {conversationsCleared && (
+                      <span className="text-xs font-semibold text-success">Conversations deleted</span>
+                    )}
+                  </div>
                 </div>
               </Card>
             )}

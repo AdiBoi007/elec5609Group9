@@ -30,10 +30,11 @@ public class AiService {
         } catch (Exception ignored) { return fallback; }
     }
 
-    public ChatText chat(String question, Map<String, Object> context, ChatText fallback) {
+    public ChatText chat(String question, List<Turn> history, Map<String, Object> context, ChatText fallback) {
         if (apiKey.isBlank()) return fallback;
         try {
-            String input = "You are Circle Health, a thoughtful fitness and nutrition assistant. Answer the user's exact question using only the supplied logged health data. Be specific, practical and encouraging. Explain patterns and trade-offs instead of merely repeating numbers. Never diagnose medical conditions and clearly acknowledge missing data. Return ONLY JSON with keys title, answer (2-5 concise sentences), and evidence (array of 3-5 short, data-specific points). Question: "
+            String input = "You are Circle Health, a thoughtful fitness and nutrition assistant. Answer the user's exact question using only the supplied logged health data. Be specific, practical and encouraging. Explain patterns and trade-offs instead of merely repeating numbers. Never diagnose medical conditions and clearly acknowledge missing data. Return ONLY JSON with keys title, answer (2-5 concise sentences), and evidence (array of 3-5 short, data-specific points)."
+                + transcript(history) + " Current question: "
                 + question + " Data: " + mapper.writeValueAsString(context);
             JsonNode parsed = mapper.readTree(extractText(call(input)));
             String title = parsed.path("title").asText(fallback.title()).trim();
@@ -125,6 +126,16 @@ public class AiService {
 
     private List<String> strings(JsonNode node, String key, List<String> fallback) { List<String> values = new ArrayList<>(); node.path(key).forEach(value -> values.add(value.asText())); return values.isEmpty() ? fallback : values; }
 
+    // Earlier turns let the model resolve references like "what about carbs?" that the
+    // keyword branches in PulseAssistantService cannot see on their own.
+    private String transcript(List<Turn> history) {
+        if (history == null || history.isEmpty()) return "";
+        StringBuilder builder = new StringBuilder(" Conversation so far, oldest first. Use it to resolve references such as \"that\" or \"what about X\":");
+        for (Turn turn : history) builder.append(' ').append(turn.role()).append(": ").append(turn.content());
+        return builder.toString();
+    }
+
+    public record Turn(String role, String content) {}
     public record ChatText(String title, String answer, List<String> evidence, boolean generatedByAi) {}
 
     private MealPlanResponse fallbackMealPlan(MealPlanRequest request) {
