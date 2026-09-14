@@ -89,6 +89,20 @@ export type UserProfile = {
   tdee?: number;
   dietarySummary?: string;
   dietaryProfile?: DietaryProfile;
+  privacy?: ConsentStatus;
+};
+
+/**
+ * Consent recorded against versioned notices. An accepted version that differs from the
+ * current one means the user has not agreed to the wording now in force.
+ */
+export type ConsentStatus = {
+  currentNoticeVersion: string;
+  acceptedNoticeVersion: string | null;
+  acceptedAt: string | null;
+  currentAiVersion: string;
+  aiConsentVersion: string | null;
+  aiConsentAt: string | null;
 };
 
 export type DietaryProfile = {

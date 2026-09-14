@@ -304,6 +304,10 @@
         activity_level varchar(255),
         fitness_goal varchar(255),
         gender varchar(255),
+        privacy_notice_version varchar(20),
+        privacy_accepted_at timestamp(6) with time zone,
+        ai_consent_version varchar(20),
+        ai_consent_at timestamp(6) with time zone,
         primary key (id)
     );
 
