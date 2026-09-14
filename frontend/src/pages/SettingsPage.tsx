@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Bell,
   Check,
@@ -29,6 +30,7 @@ import { api } from "../services/api";
 import type { UserProfile } from "../types";
 import { FITNESS_GOALS, fitnessGoalLabel, isProfileComplete } from "../types";
 import { useTheme, type ThemeMode } from "../context/theme";
+import { PRIVACY_CONTACT_EMAIL } from "../content/privacy";
 
 const sections = [
   { id: "Profile", description: "Personal details", icon: UserRound },
@@ -563,6 +565,15 @@ export default function SettingsPage() {
                   </PillButton>
                 </div>
                 <div className="mt-6 border-t border-line pt-6">
+                  <p className="text-sm font-bold">Privacy</p>
+                  <p className="mt-1 text-xs leading-5 text-muted">
+                    Read how Circle Health collects, stores and shares your data in the{" "}
+                    <Link to="/privacy" className="font-semibold text-ink underline underline-offset-2">Privacy Policy</Link>.
+                    To delete your account and all of your records, email{" "}
+                    <a href={`mailto:${PRIVACY_CONTACT_EMAIL}`} className="font-semibold text-ink underline underline-offset-2">{PRIVACY_CONTACT_EMAIL}</a>.
+                  </p>
+                </div>
+                <div className="mt-6 border-t border-line pt-6">
                   <p className="text-sm font-bold">Assistant conversations</p>
                   <p className="mt-1 text-xs leading-5 text-muted">
                     Your conversations with Ask Circle are saved to your account so you can pick up
@@ -597,7 +608,7 @@ export default function SettingsPage() {
                   <p className="text-[10px] font-bold uppercase tracking-[.12em] text-muted">Calculation notes</p>
                   <p className="mt-2 text-xs leading-5 text-muted">Nutrition targets use the Mifflin–St Jeor estimate adjusted for activity and fitness goal. Calendar scores use transparent category thresholds. Goal projections require enough recorded trend data and remain estimates.</p>
                 </div>
-                <p className="mt-4 text-[11px] text-muted">Circle Health · Fitness &amp; Nutrition Planner · University project build</p>
+                <p className="mt-4 text-[11px] text-muted">Circle Health · Fitness &amp; Nutrition Planner · University project build · <Link to="/privacy" className="font-semibold hover:text-ink hover:underline">Privacy Policy</Link> · <a href={`mailto:${PRIVACY_CONTACT_EMAIL}`} className="font-semibold hover:text-ink hover:underline">Contact</a></p>
               </Card>
             )}
           </div>

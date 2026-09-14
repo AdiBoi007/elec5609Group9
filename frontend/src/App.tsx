@@ -13,6 +13,7 @@ const PlansPage = lazy(() => import("./pages/PlansPage"));
 const FoodLibraryPage = lazy(() => import("./pages/FoodLibraryPage"));
 const InsightsPage = lazy(() => import("./pages/InsightsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 
 function ProtectedShell() {
   const { user, loading } = useAuth();
@@ -33,6 +34,8 @@ export default function App() {
         <Route path="/register" element={<AuthPage mode="register" />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* Public: the policy must be readable before anyone signs up. */}
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route element={<ProtectedShell />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/log" element={<LogPage />} />
