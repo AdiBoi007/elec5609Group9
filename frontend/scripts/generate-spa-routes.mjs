@@ -6,6 +6,7 @@ const routes = [
   "register",
   "auth/callback",
   "reset-password",
+  "privacy",
   "dashboard",
   "log",
   "foods",

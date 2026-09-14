@@ -4,13 +4,18 @@ import { Apple, BarChart3, Bell, Brain, CalendarRange, CirclePlus, Dumbbell, Lay
 import { useAuth } from "../context/auth";
 import { useTheme } from "../context/theme";
 import { api } from "../services/api";
-import { isProfileComplete, type AppNotification, type UserProfile } from "../types";
+import { isProfileComplete, type AppNotification, type ConsentStatus, type UserProfile } from "../types";
 import { CommandPalette } from "./CommandPalette";
 import { QuickLogDrawer } from "./QuickLogDrawer";
 import { OnboardingModal } from "./OnboardingModal";
+import { PrivacyNoticeModal } from "./PrivacyNoticeModal";
 import { BrandLogo } from "./BrandLogo";
 
 const ONBOARDING_DISMISSED_KEY = "pulse_onboarding_dismissed";
+
+// A server that predates consent storage returns no status; never lock users out then.
+const needsPrivacyConsent = (privacy?: ConsentStatus) =>
+  !!privacy && privacy.acceptedNoticeVersion !== privacy.currentNoticeVersion;
 
 const navGroups = [
   { label: "Today", items: [{ label: "Dashboard", to: "/dashboard", icon: LayoutDashboard }] },
@@ -48,7 +53,7 @@ function Sidebar({ open, collapsed, onClose, onToggle }: { open: boolean; collap
 
 export function AppShell() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { resolved, setMode } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("pulse_sidebar_collapsed") === "true");
@@ -59,13 +64,22 @@ export function AppShell() {
   const [unread, setUnread] = useState(0);
   const [notificationError, setNotificationError] = useState("");
   const [onboardingProfile, setOnboardingProfile] = useState<UserProfile | null>(null);
+  const [privacyProfile, setPrivacyProfile] = useState<UserProfile | null>(null);
   const loadNotifications = () => api.getNotifications().then(result => { setNotifications(result.notifications); setUnread(result.unreadCount); setNotificationError(""); }).catch(reason => setNotificationError(reason instanceof Error ? reason.message : "Unable to load notifications"));
   useEffect(() => { void loadNotifications(); }, []);
-  useEffect(() => { if (sessionStorage.getItem(ONBOARDING_DISMISSED_KEY) === "true") return; void api.getProfile().then(profile => { if (!isProfileComplete(profile)) setOnboardingProfile(profile); }).catch(() => undefined); }, []);
+  // Privacy consent is checked before onboarding: an account that has not agreed to the
+  // current policy sees nothing else until it does.
+  const offerOnboarding = (profile: UserProfile) => { if (sessionStorage.getItem(ONBOARDING_DISMISSED_KEY) !== "true" && !isProfileComplete(profile)) setOnboardingProfile(profile); };
+  useEffect(() => { void api.getProfile().then(profile => { if (needsPrivacyConsent(profile.privacy)) setPrivacyProfile(profile); else offerOnboarding(profile); }).catch(() => undefined); }, []);
   const dismissOnboarding = () => { sessionStorage.setItem(ONBOARDING_DISMISSED_KEY, "true"); setOnboardingProfile(null); };
-  useEffect(() => { const shortcut = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); } }; window.addEventListener("keydown", shortcut); return () => window.removeEventListener("keydown", shortcut); }, []);
+  const acceptPrivacy = () => { const profile = privacyProfile; setPrivacyProfile(null); if (profile) offerOnboarding(profile); };
+  const signOutFromPrivacy = () => { void logout().then(() => navigate("/login")); };
+  const privacyBlocked = privacyProfile !== null;
+  useEffect(() => { const shortcut = (event: KeyboardEvent) => { if (privacyBlocked) return; if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); } }; window.addEventListener("keydown", shortcut); return () => window.removeEventListener("keydown", shortcut); }, [privacyBlocked]);
   const toggleCollapsed = () => setCollapsed(current => { localStorage.setItem("pulse_sidebar_collapsed", String(!current)); return !current; });
   return <div className="min-h-screen bg-canvas text-ink">
+    {/* inert keeps keyboard focus and clicks out of the app while consent is pending. */}
+    <div inert={privacyBlocked}>
     <Sidebar open={menuOpen} collapsed={collapsed} onClose={() => setMenuOpen(false)} onToggle={toggleCollapsed}/>
     <div className={`transition-[padding] duration-300 ${collapsed ? "lg:pl-[76px]" : "lg:pl-[232px]"}`}>
       <header className="sticky top-0 z-20 flex h-[64px] items-center gap-3 border-b border-line bg-canvas/90 px-4 backdrop-blur-xl md:px-6 lg:px-8">
@@ -79,5 +93,7 @@ export function AppShell() {
     <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)}/>
     <QuickLogDrawer open={quickLogOpen} onClose={() => setQuickLogOpen(false)}/>
     {onboardingProfile && <OnboardingModal profile={onboardingProfile} onComplete={dismissOnboarding} onSkip={dismissOnboarding}/>}
+    </div>
+    {privacyProfile && <PrivacyNoticeModal onAccepted={acceptPrivacy} onSignOut={signOutFromPrivacy}/>}
   </div>;
 }

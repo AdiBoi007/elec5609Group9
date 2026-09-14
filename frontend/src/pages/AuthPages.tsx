@@ -22,6 +22,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
   const [password, setPassword] = useState("");
   const [dietaryPattern, setDietaryPattern] = useState("OMNIVORE");
   const [customDietaryPattern, setCustomDietaryPattern] = useState("");
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   if (authLoading) return <div className="min-h-screen animate-pulse bg-canvas" />;
   if (user) return <Navigate to="/dashboard" replace />;
 
@@ -149,6 +150,31 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </FormField>
+            {mode === "register" && (
+              <div className="space-y-3 rounded-2xl bg-surface-muted p-4">
+                <p className="text-xs leading-5 text-muted">
+                  Circle Health stores the profile, nutrition, workout, sleep and body data you enter so it can calculate your
+                  targets and show your progress. This can include health information and dietary or cultural preferences.
+                  Your data is stored in Singapore.
+                </p>
+                <label className="flex items-start gap-2.5 text-sm leading-5 text-ink">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={privacyAccepted}
+                    onChange={(event) => setPrivacyAccepted(event.target.checked)}
+                    className="mt-0.5 size-4 shrink-0 accent-black"
+                  />
+                  <span>
+                    I agree to Circle Health storing the health information I enter, as described in the{" "}
+                    <Link to="/privacy" target="_blank" rel="noopener" className="font-semibold underline underline-offset-2">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
+              </div>
+            )}
             {mode === "login" && (
               <div className="flex items-center justify-between text-sm">
                 <label className="flex items-center gap-2 text-muted">
@@ -176,7 +202,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
                 {error}
               </p>
             )}
-            <PillButton disabled={loading || !isSupabaseConfigured} className="w-full bg-ink text-white">
+            <PillButton disabled={loading || !isSupabaseConfigured || (mode === "register" && !privacyAccepted)} className="w-full bg-ink text-white">
               {loading
                 ? "Please wait…"
                 : mode === "login"
@@ -193,6 +219,9 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
             >
               {mode === "login" ? "Create account" : "Sign in"}
             </Link>
+          </p>
+          <p className="mt-4 text-center text-xs text-muted">
+            <Link to="/privacy" className="font-semibold hover:text-ink hover:underline">Privacy Policy</Link>
           </p>
           {mode === "register" && (
             <div className="mt-8 grid grid-cols-3 gap-3 border-t border-black/[0.06] pt-7 text-center text-[10px] font-semibold text-muted">

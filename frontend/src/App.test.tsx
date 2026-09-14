@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("./context/auth", () => ({ useAuth: () => ({ user: null, loading: false }) }));
 vi.mock("./lib/supabase", () => ({ supabase: { auth: { getSession: vi.fn(), signOut: vi.fn() } } }));
 
-import { LegacyRedirect } from "./App";
+import App, { LegacyRedirect } from "./App";
 
 function LocationProbe() {
   const location = useLocation();
@@ -22,5 +22,14 @@ describe("legacy route migration", () => {
   it("preserves a legacy query when the destination has no fixed query", async () => {
     render(<MemoryRouter initialEntries={["/plans?source=bookmark"]}><Routes><Route path="/plans" element={<LegacyRedirect to="/meal-planner"/>}/><Route path="/meal-planner" element={<LocationProbe/>}/></Routes></MemoryRouter>);
     expect(await screen.findByText("/meal-planner?source=bookmark")).toBeTruthy();
+  });
+});
+
+describe("public privacy policy", () => {
+  it("renders at /privacy without signing in", async () => {
+    render(<MemoryRouter initialEntries={["/privacy"]}><App/></MemoryRouter>);
+    expect(await screen.findByRole("heading", { level: 1, name: "Privacy Policy" })).toBeTruthy();
+    expect(screen.getAllByText("circle.health.elec5619@gmail.com").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("heading", { name: "Sign in to Circle Health" })).toBeNull();
   });
 });

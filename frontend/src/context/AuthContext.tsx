@@ -3,6 +3,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { AuthContext, type AuthContextValue } from "./auth";
 import { api } from "../services/api";
 import { isPreviewMode, supabase } from "../lib/supabase";
+import { PRIVACY_NOTICE_VERSION } from "../content/privacy";
 import type { User } from "../types";
 
 const appUser = (user: SupabaseUser | null): User | null => {
@@ -59,7 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
-            data: { name, dietaryPattern, customDietaryPattern },
+            // The register form only submits after the user agrees to the Privacy Policy.
+            // The server records this version when it first provisions the account, which
+            // covers sign-ups that must confirm their email before they have a session.
+            data: { name, dietaryPattern, customDietaryPattern, privacyNoticeVersion: PRIVACY_NOTICE_VERSION },
           },
         });
         if (error) throw error;
@@ -89,6 +93,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               budgetPreference: "MODERATE",
             },
           });
+          // Provisioning normally records consent already; this also covers accounts whose
+          // local profile existed before sign-up. A failure is not fatal because the app
+          // asks again on the next page load.
+          await api.acceptPrivacy(PRIVACY_NOTICE_VERSION).catch(() => undefined);
         }
         return Boolean(data.session);
       },
