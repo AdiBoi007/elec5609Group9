@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Bell,
   Check,
@@ -31,6 +31,7 @@ import type { UserProfile } from "../types";
 import { FITNESS_GOALS, fitnessGoalLabel, isProfileComplete } from "../types";
 import { useTheme, type ThemeMode } from "../context/theme";
 import { PRIVACY_CONTACT_EMAIL } from "../content/privacy";
+import { useAiConsent } from "../hooks/useAiConsent";
 
 const sections = [
   { id: "Profile", description: "Personal details", icon: UserRound },
@@ -46,7 +47,11 @@ type ReminderKey = "workouts" | "meals" | "water" | "weigh-in" | "sleep";
 
 export default function SettingsPage() {
   const { mode, resolved, setMode } = useTheme();
-  const [section, setSection] = useState<Section>("Profile");
+  const [searchParams] = useSearchParams();
+  // Deep links such as /settings?section=Data land on the requested panel.
+  const [section, setSection] = useState<Section>(() => sections.find((item) => item.id === searchParams.get("section"))?.id ?? "Profile");
+  const consent = useAiConsent();
+  const [aiUpdating, setAiUpdating] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -185,6 +190,18 @@ export default function SettingsPage() {
     }
   };
 
+  const turnOffAi = async () => {
+    setError("");
+    setAiUpdating(true);
+    try {
+      await consent.revoke();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to turn off AI features");
+    } finally {
+      setAiUpdating(false);
+    }
+  };
+
   const download = async () => {
     setError("");
     try {
@@ -204,6 +221,7 @@ export default function SettingsPage() {
 
   return (
     <div>
+      {consent.dialog}
       <PageHeader
         eyebrow="Account"
         title="Settings"
@@ -564,6 +582,34 @@ export default function SettingsPage() {
                     Export CSV
                   </PillButton>
                 </div>
+                {consent.known && (
+                  <div className="mt-6 border-t border-line pt-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-bold">AI features</p>
+                        <p className="mt-1 text-xs leading-5 text-muted">
+                          {consent.allowed
+                            ? `On since ${new Date(consent.status!.aiConsentAt!).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}. Ask Circle and AI plans send the relevant health data to OpenAI. Your name and email are never included.`
+                            : "Off. Ask Circle and plans use Circle Health's built-in guidance and templates, and nothing is sent to OpenAI."}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-muted">
+                          Turning AI off stops future requests. Data already sent to OpenAI cannot be recalled.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={consent.allowed}
+                        aria-label="AI features"
+                        disabled={aiUpdating}
+                        onClick={() => (consent.allowed ? void turnOffAi() : consent.openSettings())}
+                        className={`relative h-7 w-12 shrink-0 rounded-full transition disabled:opacity-50 ${consent.allowed ? "bg-ink" : "bg-[#deded8]"}`}
+                      >
+                        <span className={`absolute top-1 size-5 rounded-full bg-white transition ${consent.allowed ? "left-6" : "left-1"}`} />
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="mt-6 border-t border-line pt-6">
                   <p className="text-sm font-bold">Privacy</p>
                   <p className="mt-1 text-xs leading-5 text-muted">
@@ -577,9 +623,9 @@ export default function SettingsPage() {
                   <p className="text-sm font-bold">Assistant conversations</p>
                   <p className="mt-1 text-xs leading-5 text-muted">
                     Your conversations with Ask Circle are saved to your account so you can pick up
-                    where you left off. Questions and the health data behind them are sent to an AI
-                    service to generate each answer; deleting a conversation removes it from Circle
-                    Health but cannot recall what was already sent.
+                    where you left off. When AI features are on, questions and the health data behind
+                    them are sent to OpenAI to generate each answer; deleting a conversation removes it
+                    from Circle Health but cannot recall what was already sent.
                   </p>
                   <div className="mt-4 flex flex-wrap items-center gap-3">
                     <PillButton onClick={() => void clearConversations()} className="bg-[#fff1ef] text-coral">

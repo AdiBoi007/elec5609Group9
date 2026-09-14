@@ -21,10 +21,11 @@ public class PlanService {
     private final AiService aiService;
     private final ObjectMapper mapper;
     private final DietaryProfileService dietaryProfiles;
+    private final ConsentService consent;
 
     @Transactional
     public WorkoutPlanRecord generateWorkout(String email, WorkoutPlanRequest request) {
-        WorkoutPlanResponse generated = aiService.workoutPlan(request);
+        WorkoutPlanResponse generated = aiService.workoutPlan(request, consent.aiAllowed(user(email)));
         GeneratedWorkoutPlan entity = new GeneratedWorkoutPlan(); entity.setUser(user(email)); entity.setName(generated.name()); entity.setGoal(generated.goal()); entity.setDaysPerWeek(generated.days().size()); entity.setSaved(true); entity.setPlanJson(json(generated));
         return workoutRecord(workoutPlans.save(entity));
     }
@@ -40,7 +41,7 @@ public class PlanService {
         var dietary = dietaryProfiles.input(owner.getProfile());
         MealPlanRequest enriched = new MealPlanRequest(request.calorieTarget(), request.proteinTarget(), request.carbohydrateTarget(), request.fatTarget(),
             dietary.dietaryPattern(), String.join(", ", dietary.allergies()), String.join(", ", dietary.dislikedFoods()), request.mealsPerDay(), dietary);
-        MealPlanResponse generated = aiService.mealPlan(enriched);
+        MealPlanResponse generated = aiService.mealPlan(enriched, consent.aiAllowed(owner));
         GeneratedMealPlan entity = new GeneratedMealPlan(); entity.setUser(owner); entity.setName(generated.name()); entity.setCalorieTarget(request.calorieTarget()); entity.setSaved(true); entity.setPlanJson(json(generated));
         return mealRecord(mealPlans.save(entity));
     }

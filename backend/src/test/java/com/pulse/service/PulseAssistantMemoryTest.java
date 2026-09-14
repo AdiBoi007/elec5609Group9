@@ -18,7 +18,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class PulseAssistantMemoryTest {
@@ -34,6 +36,7 @@ class PulseAssistantMemoryTest {
     private final AssistantConversationRepository conversations = mock(AssistantConversationRepository.class);
     private final AssistantMessageRepository messages = mock(AssistantMessageRepository.class);
     private final ObjectMapper mapper = new ObjectMapper();
+    private final ConsentService consent = mock(ConsentService.class);
 
     private PulseAssistantService service;
     private User user;
@@ -52,10 +55,11 @@ class PulseAssistantMemoryTest {
         // Every branch reads the dashboard, so give it real numbers. These questions all land
         // on the protein branch, which is the smallest slice of data that exercises ask().
         when(dashboard.get(anyString())).thenReturn(new DashboardSummary(0, 1800, 60, 120, 0, 200, 0, 60, 0, 2500, 0d, 0));
-        when(ai.chat(anyString(), any(), any(), any()))
+        when(consent.aiAllowed(any())).thenReturn(true);
+        when(ai.chat(anyString(), any(), any(), any(), anyBoolean()))
             .thenReturn(new AiService.ChatText("Protein today", "You have 40 g remaining.", List.of("40 g remaining"), true));
 
-        service = new PulseAssistantService(dashboard, progress, calendar, goals, users, ai, conversations, messages, mapper);
+        service = new PulseAssistantService(dashboard, progress, calendar, goals, users, ai, conversations, messages, mapper, consent);
     }
 
     // 1. A first question opens a conversation and hands its id back.
@@ -77,6 +81,19 @@ class PulseAssistantMemoryTest {
 
     // 2. A follow-up reuses the conversation instead of starting a new one.
 
+    // The user's own AI consent decides whether AiService may contact OpenAI.
+
+    @Test void passesTheUsersAiConsentToTheModelCall() {
+        when(consent.aiAllowed(user)).thenReturn(false);
+        service.ask(EMAIL, "How is my protein?", null);
+        verify(ai).chat(anyString(), any(), any(), any(), eq(false));
+    }
+
+    @Test void consentedUsersMayUseTheModel() {
+        service.ask(EMAIL, "How is my protein?", null);
+        verify(ai).chat(anyString(), any(), any(), any(), eq(true));
+    }
+
     @Test void followUpReusesTheExistingConversation() {
         when(conversations.findByIdAndUserId(7L, 1L)).thenReturn(Optional.of(conversation));
 
@@ -97,7 +114,7 @@ class PulseAssistantMemoryTest {
         ArgumentCaptor<List<AiService.Turn>> captor = ArgumentCaptor.forClass(List.class);
         service.ask(EMAIL, "And my protein target?", 7L);
 
-        verify(ai).chat(anyString(), captor.capture(), any(), any());
+        verify(ai).chat(anyString(), captor.capture(), any(), any(), anyBoolean());
         assertThat(captor.getValue()).extracting(AiService.Turn::content)
             .containsExactly("How is my protein?", "You have 40 g remaining.");
     }
@@ -111,7 +128,7 @@ class PulseAssistantMemoryTest {
         ArgumentCaptor<List<AiService.Turn>> captor = ArgumentCaptor.forClass(List.class);
         service.ask(EMAIL, "protein again?", 7L);
 
-        verify(ai).chat(anyString(), captor.capture(), any(), any());
+        verify(ai).chat(anyString(), captor.capture(), any(), any(), anyBoolean());
         assertThat(captor.getValue()).extracting(AiService.Turn::content).containsExactly("first", "second", "third");
     }
 
@@ -125,7 +142,7 @@ class PulseAssistantMemoryTest {
         ArgumentCaptor<List<AiService.Turn>> captor = ArgumentCaptor.forClass(List.class);
         service.ask(EMAIL, "protein again?", 7L);
 
-        verify(ai).chat(anyString(), captor.capture(), any(), any());
+        verify(ai).chat(anyString(), captor.capture(), any(), any(), anyBoolean());
         assertThat(captor.getValue()).hasSize(30);
         assertThat(captor.getValue().get(0).content()).isEqualTo("turn 1");
         assertThat(captor.getValue().get(29).content()).isEqualTo("turn 30");
@@ -142,7 +159,7 @@ class PulseAssistantMemoryTest {
         ArgumentCaptor<List<AiService.Turn>> captor = ArgumentCaptor.forClass(List.class);
         service.ask(EMAIL, "protein again?", 7L);
 
-        verify(ai).chat(anyString(), captor.capture(), any(), any());
+        verify(ai).chat(anyString(), captor.capture(), any(), any(), anyBoolean());
         // 6000 char budget fits two 2501-char messages, and the newest survive.
         assertThat(captor.getValue()).hasSize(2);
         assertThat(captor.getValue()).extracting(turn -> turn.content().substring(2500))
@@ -158,7 +175,7 @@ class PulseAssistantMemoryTest {
         ArgumentCaptor<List<AiService.Turn>> captor = ArgumentCaptor.forClass(List.class);
         service.ask(EMAIL, "protein again?", 7L);
 
-        verify(ai).chat(anyString(), captor.capture(), any(), any());
+        verify(ai).chat(anyString(), captor.capture(), any(), any(), anyBoolean());
         assertThat(captor.getValue()).hasSize(1);
     }
 
@@ -167,7 +184,7 @@ class PulseAssistantMemoryTest {
         ArgumentCaptor<List<AiService.Turn>> captor = ArgumentCaptor.forClass(List.class);
         service.ask(EMAIL, "How is my protein?", null);
 
-        verify(ai).chat(anyString(), captor.capture(), any(), any());
+        verify(ai).chat(anyString(), captor.capture(), any(), any(), anyBoolean());
         assertThat(captor.getValue()).isEmpty();
     }
 
