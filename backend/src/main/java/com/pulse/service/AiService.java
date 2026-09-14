@@ -2,6 +2,7 @@ package com.pulse.service;
 
 import com.fasterxml.jackson.databind.*;
 import com.pulse.dto.AiDtos.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -15,14 +16,26 @@ public class AiService {
     private final ObjectMapper mapper;
     private final RestClient client;
 
+    @Autowired
     public AiService(@Value("${app.openai.api-key}") String apiKey, @Value("${app.openai.model}") String model, ObjectMapper mapper) {
-        this.apiKey = apiKey; this.model = model; this.mapper = mapper;
-        this.client = RestClient.builder().baseUrl("https://api.openai.com/v1").build();
+        this(apiKey, model, mapper, RestClient.builder());
     }
 
-    public InsightResponse insights(InsightRequest request) {
+    // Tests pass a builder bound to a mock server to prove when OpenAI is and is not called.
+    AiService(String apiKey, String model, ObjectMapper mapper, RestClient.Builder clientBuilder) {
+        this.apiKey = apiKey; this.model = model; this.mapper = mapper;
+        this.client = clientBuilder.baseUrl("https://api.openai.com/v1").build();
+    }
+
+    // allowExternal carries the user's current AI consent. Without it nothing may leave the
+    // server, so every method answers from the built-in fallback exactly as it does without a key.
+    private boolean external(boolean allowExternal) {
+        return allowExternal && !apiKey.isBlank();
+    }
+
+    public InsightResponse insights(InsightRequest request, boolean allowExternal) {
         InsightResponse fallback = deterministicInsights(request);
-        if (apiKey.isBlank()) return fallback;
+        if (!external(allowExternal)) return fallback;
         try {
             String input = "You are a concise fitness planning assistant. Never diagnose medical conditions. Analyse this user data and return ONLY JSON with keys summary, wins (array), attentionAreas (array), recommendations (array of 3 short strings). Data: " + mapper.writeValueAsString(request);
             JsonNode response = call(input); JsonNode parsed = mapper.readTree(extractText(response));
@@ -30,8 +43,8 @@ public class AiService {
         } catch (Exception ignored) { return fallback; }
     }
 
-    public ChatText chat(String question, List<Turn> history, Map<String, Object> context, ChatText fallback) {
-        if (apiKey.isBlank()) return fallback;
+    public ChatText chat(String question, List<Turn> history, Map<String, Object> context, ChatText fallback, boolean allowExternal) {
+        if (!external(allowExternal)) return fallback;
         try {
             String input = "You are Circle Health, a thoughtful fitness and nutrition assistant. Answer the user's exact question using only the supplied logged health data. Be specific, practical and encouraging. Explain patterns and trade-offs instead of merely repeating numbers. Never diagnose medical conditions and clearly acknowledge missing data. Return ONLY JSON with keys title, answer (2-5 concise sentences), and evidence (array of 3-5 short, data-specific points)."
                 + transcript(history) + " Current question: "
@@ -47,9 +60,9 @@ public class AiService {
         }
     }
 
-    public WorkoutPlanResponse workoutPlan(WorkoutPlanRequest request) {
+    public WorkoutPlanResponse workoutPlan(WorkoutPlanRequest request, boolean allowExternal) {
         WorkoutPlanResponse fallback = fallbackPlan(request);
-        if (apiKey.isBlank()) return fallback;
+        if (!external(allowExternal)) return fallback;
         try {
             String input = "Create a safe non-medical workout plan. Return ONLY JSON with name, goal, summary, and days. Each day has name, focus, exercises; each exercise has name, sets, reps, restSeconds, notes. Inputs: " + mapper.writeValueAsString(request);
             JsonNode parsed = mapper.readTree(extractText(call(input)));
@@ -63,9 +76,9 @@ public class AiService {
         } catch (Exception ignored) { return fallback; }
     }
 
-    public MealPlanResponse mealPlan(MealPlanRequest request) {
+    public MealPlanResponse mealPlan(MealPlanRequest request, boolean allowExternal) {
         MealPlanResponse fallback = fallbackMealPlan(request);
-        if (apiKey.isBlank()) return fallback;
+        if (!external(allowExternal)) return fallback;
         try {
             String input = "Create a practical seven-day meal plan. Return ONLY JSON with name, summary, days. Each day has day and meals; each meal has name, calories, protein, carbohydrates, fat, ingredients with name, quantity, unit. Respect allergies and dislikes. Inputs: " + mapper.writeValueAsString(request);
             JsonNode parsed = mapper.readTree(extractText(call(input)));

@@ -22,6 +22,8 @@ import {
   SegmentedControl,
 } from "../components/ui";
 import { api } from "../services/api";
+import { AiNotice } from "../components/AiConsent";
+import { useAiConsent } from "../hooks/useAiConsent";
 import type {
   GroceryItem,
   GroceryList,
@@ -39,6 +41,7 @@ export default function PlansPage() {
   const [selectedWorkout, setSelectedWorkout] = useState<number>();
   const [selectedGrocery, setSelectedGrocery] = useState<number>();
   const [generator, setGenerator] = useState<"meal" | "workout" | null>(null);
+  const consent = useAiConsent();
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -145,6 +148,7 @@ export default function PlansPage() {
       setError("Enter realistic nutrition targets and a dietary preference.");
       return;
     }
+    if (!(await consent.confirm("mealPlan"))) return;
     setSaving(true);
     try {
       const plan = await api.generateMealPlan(mealForm);
@@ -177,6 +181,7 @@ export default function PlansPage() {
       );
       return;
     }
+    if (!(await consent.confirm("workoutPlan"))) return;
     setSaving(true);
     try {
       const plan = await api.generateWorkoutPlan(workoutForm);
@@ -854,6 +859,7 @@ export default function PlansPage() {
                 >
                   {saving ? "Building your week…" : "Generate and save plan"}
                 </PillButton>
+                <AiNotice consent={consent} feature="mealPlan" className="text-center" />
               </div>
             </Modal>
           )}
@@ -965,11 +971,13 @@ export default function PlansPage() {
                 >
                   {saving ? "Building your plan…" : "Generate and save plan"}
                 </PillButton>
+                <AiNotice consent={consent} feature="workoutPlan" className="text-center" />
               </div>
             </Modal>
           )}
         </>
       )}
+      {consent.dialog}
     </div>
   );
 }

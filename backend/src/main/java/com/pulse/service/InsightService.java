@@ -19,6 +19,7 @@ public class InsightService {
     private final BodyMeasurementRepository measurements;
     private final AiService ai;
     private final DietaryProfileService dietaryProfiles;
+    private final ConsentService consent;
 
     @Transactional(readOnly = true)
     public InsightResponse insights(String email) {
@@ -34,7 +35,7 @@ public class InsightService {
         hydration.forEach((date, amount) -> nutrition.add(map("date", date, "waterMl", amount)));
         List<Map<String, Object>> sleep = sleepLogs.findByUserIdAndStartedAtBetweenOrderByStartedAt(user.getId(), from.minusDays(1), to).stream().map(s -> map("date", s.getEndedAt().toLocalDate(), "minutes", Duration.between(s.getStartedAt(), s.getEndedAt()).toMinutes(), "quality", s.getQuality())).toList();
         List<Map<String, Object>> body = measurements.findByUserIdAndMeasuredOnBetweenOrderByMeasuredOn(user.getId(), from.toLocalDate(), to.toLocalDate()).stream().map(m -> map("date", m.getMeasuredOn(), "weightKg", m.getWeightKg(), "bodyFatPercentage", m.getBodyFatPercentage(), "waistCm", m.getWaistCm())).toList();
-        return ai.insights(new InsightRequest(profile, workoutData, nutrition, sleep, body));
+        return ai.insights(new InsightRequest(profile, workoutData, nutrition, sleep, body), consent.aiAllowed(user));
     }
     private Map<String, Object> map(Object... values) { Map<String, Object> result = new LinkedHashMap<>(); for (int i = 0; i < values.length; i += 2) if (values[i + 1] != null) result.put(values[i].toString(), values[i + 1]); return result; }
 }

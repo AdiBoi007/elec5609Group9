@@ -13,6 +13,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -34,7 +35,7 @@ class PulseAssistantSafetyTest {
         when(users.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user));
         when(conversations.save(any(AssistantConversation.class))).thenReturn(conversation);
         when(goals.active(EMAIL)).thenReturn(List.of());
-        return new PulseAssistantService(dashboard, progress, calendar, goals, users, ai, conversations, messages, new ObjectMapper());
+        return new PulseAssistantService(dashboard, progress, calendar, goals, users, ai, conversations, messages, new ObjectMapper(), mock(ConsentService.class));
     }
 
     @Test void chineseSymptomQuestionHitsTheSafetyBranch() {
@@ -48,7 +49,7 @@ class PulseAssistantSafetyTest {
     @Test void safetyResponseIsNeverParaphrasedByTheModel() {
         service().ask(EMAIL, "I have chest pain after training", null);
 
-        verify(ai, never()).chat(anyString(), any(), any(), any());
+        verify(ai, never()).chat(anyString(), any(), any(), any(), anyBoolean());
     }
 
     @Test void safetyBranchStillPersistsTheExchange() {

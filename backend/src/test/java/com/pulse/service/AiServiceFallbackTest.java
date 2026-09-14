@@ -11,27 +11,27 @@ class AiServiceFallbackTest {
     private final AiService service = new AiService("", "gpt-test", new ObjectMapper());
 
     @Test void createsStructuredWorkoutFallbackWithoutApiKey() {
-        var result = service.workoutPlan(new WorkoutPlanRequest("Muscle Gain", "Intermediate", 4, 60, List.of("Dumbbells"), "No jumping"));
+        var result = service.workoutPlan(new WorkoutPlanRequest("Muscle Gain", "Intermediate", 4, 60, List.of("Dumbbells"), "No jumping"), true);
         assertThat(result.generatedByAi()).isFalse();
         assertThat(result.days()).hasSize(4);
         assertThat(result.days().get(0).exercises()).allSatisfy(exercise -> assertThat(exercise.name()).isNotBlank());
     }
 
     @Test void bodyweightFallbackDoesNotInventGymEquipment() {
-        var result = service.workoutPlan(new WorkoutPlanRequest("General Fitness", "Beginner", 3, 30, List.of("None"), "Home workouts"));
+        var result = service.workoutPlan(new WorkoutPlanRequest("General Fitness", "Beginner", 3, 30, List.of("None"), "Home workouts"), true);
         assertThat(result.days()).flatExtracting(WorkoutDay::exercises).extracting(WorkoutExercisePlan::name)
             .allMatch(name -> Set.of("Push-up", "Bulgarian Split Squat", "Glute Bridge", "Plank", "Burpee").contains(name));
     }
 
     @Test void createsSevenDayMealFallbackWithoutApiKey() {
-        var result = service.mealPlan(new MealPlanRequest(2200, 150, 250, 70, "Balanced", "None", "Olives", 4));
+        var result = service.mealPlan(new MealPlanRequest(2200, 150, 250, 70, "Balanced", "None", "Olives", 4), true);
         assertThat(result.generatedByAi()).isFalse();
         assertThat(result.days()).hasSize(7);
         assertThat(result.days().get(0).meals()).hasSize(4);
     }
 
     @Test void veganFallbackRespectsCoreExclusions() {
-        var result = service.mealPlan(new MealPlanRequest(2200, 150, 250, 70, "Vegan", "Dairy, eggs", "Fish", 4));
+        var result = service.mealPlan(new MealPlanRequest(2200, 150, 250, 70, "Vegan", "Dairy, eggs", "Fish", 4), true);
         var ingredientNames = result.days().stream().flatMap(day -> day.meals().stream()).flatMap(meal -> meal.ingredients().stream()).map(Ingredient::name).map(String::toLowerCase).toList();
         assertThat(ingredientNames).noneMatch(name -> name.contains("yoghurt") && !name.contains("soy"));
         assertThat(ingredientNames).noneMatch(name -> name.contains("egg") || name.contains("chicken") || name.contains("tuna") || name.contains("salmon") || name.contains("beef"));
@@ -39,7 +39,7 @@ class AiServiceFallbackTest {
 
     @Test void structuredDietProfileControlsFallbackIngredients() {
         var profile = new DietaryProfileInput("VEGETARIAN", "", Set.of("NO_EGGS"), Set.of(), Set.of(), Set.of("PEANUTS"), Set.of(), Set.of(), Set.of("OLIVES"), Set.of("INDIAN"), Set.of("TOFU", "LENTILS"), 4, "EASY", "MIN_15_30", "MODERATE");
-        var result = service.mealPlan(new MealPlanRequest(2200, 150, 250, 70, "Ignored legacy value", "", "", 4, profile));
+        var result = service.mealPlan(new MealPlanRequest(2200, 150, 250, 70, "Ignored legacy value", "", "", 4, profile), true);
         var ingredients = result.days().stream().flatMap(day -> day.meals().stream()).flatMap(meal -> meal.ingredients().stream()).map(Ingredient::name).map(String::toLowerCase).toList();
         assertThat(ingredients).noneMatch(name -> name.contains("egg") || name.contains("chicken") || name.contains("fish") || name.contains("peanut") || name.contains("olive"));
         assertThat(ingredients).anyMatch(name -> name.contains("tofu") || name.contains("lentil"));
@@ -55,7 +55,7 @@ class AiServiceFallbackTest {
 
     @Test void fallbackInsightsUsePreferredProteinSources() {
         var profile = profile("VEGETARIAN", Set.of("NO_EGGS"), Set.of(), Set.of(), Set.of("TOFU", "LENTILS"));
-        var result = service.insights(new InsightRequest(Map.of("dietaryProfile", profile), List.of(), List.of(), List.of(), List.of()));
+        var result = service.insights(new InsightRequest(Map.of("dietaryProfile", profile), List.of(), List.of(), List.of(), List.of()), true);
         assertThat(result.recommendations().getFirst()).containsIgnoringCase("tofu").containsIgnoringCase("lentils").doesNotContainIgnoringCase("chicken");
     }
 
@@ -64,13 +64,13 @@ class AiServiceFallbackTest {
     }
 
     private void assertPlanExcludes(DietaryProfileInput profile, String forbiddenPattern) {
-        var result = service.mealPlan(new MealPlanRequest(2200, 150, 250, 70, "legacy", "", "", 4, profile));
+        var result = service.mealPlan(new MealPlanRequest(2200, 150, 250, 70, "legacy", "", "", 4, profile), true);
         assertThat(result.days().stream().flatMap(day -> day.meals().stream()).flatMap(meal -> meal.ingredients().stream()).map(Ingredient::name).map(String::toLowerCase))
             .noneMatch(name -> name.matches(".*(" + forbiddenPattern + ").*"));
     }
 
     @Test void fallbackInsightsRemainStructuredAndNonMedical() {
-        var result = service.insights(new InsightRequest(Map.of("goal", "strength"), List.of(Map.of("name", "Upper")), List.of(), List.of(), List.of()));
+        var result = service.insights(new InsightRequest(Map.of("goal", "strength"), List.of(Map.of("name", "Upper")), List.of(), List.of(), List.of()), true);
         assertThat(result.wins()).isNotEmpty();
         assertThat(result.recommendations()).hasSize(3);
         assertThat(result.disclaimer()).containsIgnoringCase("not medical advice");
