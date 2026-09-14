@@ -2,6 +2,7 @@ package com.pulse.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -41,4 +42,10 @@ public class UserProfile extends BaseEntity {
     @Column(length = 30) private String mealPrepDifficulty;
     @Column(length = 30) private String mealPrepTime;
     @Column(length = 30) private String budgetPreference;
+    // Consent is stored as the notice version the user accepted plus when, so a later
+    // wording change can require fresh consent. Null means never accepted.
+    @Column(length = 20) private String privacyNoticeVersion;
+    private Instant privacyAcceptedAt;
+    @Column(length = 20) private String aiConsentVersion;
+    private Instant aiConsentAt;
 }

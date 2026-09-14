@@ -33,6 +33,7 @@ import type {
   ConversationSummary,
   ConversationDetail,
   TodaySummary,
+  ConsentStatus,
 } from "../types";
 import { isPreviewMode, supabase } from "../lib/supabase";
 
@@ -85,6 +86,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(profile),
     }),
+  acceptPrivacy: (version: string) =>
+    request<ConsentStatus>("/consent/privacy", { method: "PUT", body: JSON.stringify({ version }) }),
+  grantAiConsent: (version: string) =>
+    request<ConsentStatus>("/consent/ai", { method: "PUT", body: JSON.stringify({ version }) }),
+  revokeAiConsent: () => request<void>("/consent/ai", { method: "DELETE" }),
   exportProfile: async () => {
     const { data, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) throw sessionError;

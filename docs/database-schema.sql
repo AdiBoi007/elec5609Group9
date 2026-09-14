@@ -662,7 +662,11 @@ CREATE TABLE public.user_profile (
     dietary_pattern character varying(40),
     meal_prep_difficulty character varying(30),
     meal_prep_time character varying(30),
-    preferred_meals_per_day integer
+    preferred_meals_per_day integer,
+    privacy_notice_version character varying(20),
+    privacy_accepted_at timestamp(6) with time zone,
+    ai_consent_version character varying(20),
+    ai_consent_at timestamp(6) with time zone
 );
 
 

@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import com.pulse.service.NutritionCalculatorService;
 import com.pulse.service.NutritionTotalsCalculator;
 import com.pulse.service.DietaryProfileService;
+import com.pulse.service.ConsentService;
 import com.pulse.dto.DietaryProfileDtos.DietaryProfileUpdate;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -32,10 +33,12 @@ public class ProfileController {
     private final GoalRepository goals;
     private final DietaryProfileService dietaryProfiles;
     private final NutritionTotalsCalculator nutritionTotals;
+    private final ConsentService consent;
 
     @GetMapping @Transactional(readOnly = true) Map<String, Object> get(Authentication auth) {
         User user = users.findByEmailIgnoreCase(auth.getName()).orElseThrow(); UserProfile p = user.getProfile();
         Map<String, Object> result = new LinkedHashMap<>(); result.put("name", user.getName()); result.put("email", user.getEmail()); result.put("age", p.getAge() == null ? 0 : p.getAge()); result.put("gender", p.getGender() == null ? "" : p.getGender()); result.put("height", p.getHeightCm() == null ? 0 : p.getHeightCm()); result.put("weight", p.getWeightKg() == null ? 0 : p.getWeightKg()); result.put("activityLevel", p.getActivityLevel() == null ? "" : p.getActivityLevel()); result.put("fitnessGoal", p.getFitnessGoal() == null ? "" : p.getFitnessGoal().name()); result.put("dietaryPreferences", p.getDietaryPreferences() == null ? "" : p.getDietaryPreferences()); result.put("dislikedIngredients", p.getDislikedIngredients() == null ? "" : p.getDislikedIngredients()); result.put("dietaryProfile", dietaryProfiles.response(p)); result.put("dietarySummary", dietaryProfiles.summary(p)); result.put("calorieTarget", p.getCalorieTarget()); result.put("proteinTarget", p.getProteinTarget()); result.put("carbTarget", p.getCarbTarget()); result.put("fatTarget", p.getFatTarget()); result.put("hydrationTargetMl", p.getHydrationTargetMl());
+        result.put("privacy", consent.status(p));
         if (p.getAge() != null && p.getHeightCm() != null && p.getWeightKg() != null && p.getGender() != null && p.getActivityLevel() != null && p.getFitnessGoal() != null) result.putAll(calculator.calculate(p.getAge(), p.getGender(), p.getHeightCm(), p.getWeightKg(), p.getActivityLevel(), p.getFitnessGoal()));
         return result;
     }
