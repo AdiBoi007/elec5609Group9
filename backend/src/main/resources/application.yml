@@ -7,6 +7,13 @@ spring:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
+    hikari:
+      # The Supabase session pooler allows 15 clients for the whole project, shared by
+      # production (up to 10, see application-prod.yml) and every teammate's local run.
+      # Hikari's default of 10 lets one local run exhaust it, so keep dev small and idle-free.
+      maximum-pool-size: 2
+      minimum-idle: 0
+      idle-timeout: 60000
   jpa:
     hibernate:
       ddl-auto: update
